@@ -1,0 +1,1138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diffusion Models: A Theoretical Introduction - Fukang Wen</title>
+    <meta name="description" content="A comprehensive theoretical introduction to Diffusion Models, from DDPM to video generation.">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700;900&family=STIX+Two+Math&display=swap" rel="stylesheet">
+    
+    <!-- MathJax -->
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Lato', Georgia, serif;
+            font-size: 17px;
+            line-height: 1.8;
+            color: #333;
+            background-color: #fff;
+            max-width: 780px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+        
+        a {
+            color: #1772d0;
+            text-decoration: none;
+        }
+        
+        a:hover {
+            color: #f09228;
+        }
+        
+        .back-link {
+            display: inline-block;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        
+        h1 {
+            font-size: 32px;
+            font-weight: 900;
+            margin-bottom: 10px;
+            line-height: 1.3;
+        }
+        
+        .meta {
+            color: #666;
+            font-size: 15px;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        h2 {
+            font-size: 24px;
+            font-weight: 700;
+            margin-top: 40px;
+            margin-bottom: 15px;
+            color: #1772d0;
+        }
+        
+        h3 {
+            font-size: 20px;
+            font-weight: 700;
+            margin-top: 30px;
+            margin-bottom: 10px;
+        }
+        
+        p {
+            margin-bottom: 18px;
+            text-align: justify;
+        }
+        
+        .highlight-box {
+            background: #f8f9fa;
+            border-left: 4px solid #1772d0;
+            padding: 20px;
+            margin: 25px 0;
+            border-radius: 0 5px 5px 0;
+        }
+        
+        .highlight-box.definition {
+            border-left-color: #28a745;
+            background: #f0fff4;
+        }
+        
+        .highlight-box.theorem {
+            border-left-color: #dc3545;
+            background: #fff5f5;
+        }
+        
+        .highlight-box.example {
+            border-left-color: #ffc107;
+            background: #fffbf0;
+        }
+        
+        .highlight-box-title {
+            font-weight: 700;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        
+        code {
+            font-family: 'Consolas', 'Monaco', monospace;
+            background: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 14px;
+        }
+        
+        pre {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 20px;
+            border-radius: 5px;
+            overflow-x: auto;
+            margin: 20px 0;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        
+        pre code {
+            background: none;
+            padding: 0;
+            color: inherit;
+        }
+        
+        ul, ol {
+            margin: 15px 0 15px 30px;
+        }
+        
+        li {
+            margin-bottom: 8px;
+        }
+        
+        .figure {
+            text-align: center;
+            margin: 30px 0;
+        }
+        
+        .figure img {
+            max-width: 100%;
+            border-radius: 5px;
+        }
+        
+        .figure-caption {
+            font-size: 14px;
+            color: #666;
+            margin-top: 10px;
+            font-style: italic;
+        }
+        
+        .toc {
+            background: #f8f9fa;
+            padding: 20px 30px;
+            border-radius: 5px;
+            margin-bottom: 30px;
+        }
+        
+        .toc-title {
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+        
+        .toc ul {
+            margin: 0;
+            list-style: none;
+        }
+        
+        .toc li {
+            margin-bottom: 5px;
+        }
+        
+        .toc a {
+            color: #555;
+        }
+        
+        .toc a:hover {
+            color: #1772d0;
+        }
+        
+        .math-display {
+            overflow-x: auto;
+            margin: 20px 0;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 25px 0;
+            font-size: 15px;
+        }
+        
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        th {
+            background: #f8f9fa;
+            font-weight: 700;
+        }
+
+        footer {
+            margin-top: 60px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+            font-size: 14px;
+            color: #999;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <a href="../index.html" class="back-link">&larr; Back to homepage</a>
+    
+    <h1>Diffusion Models: A Theoretical Introduction</h1>
+    
+    <div class="meta">
+        <strong>Fukang Wen</strong> &middot; January 2026 &middot; 
+        <span>Tags: Generative Models, Diffusion, Score Matching, Latent Diffusion, Video Generation</span>
+    </div>
+
+    <div class="toc">
+        <div class="toc-title">Table of Contents</div>
+        <ul>
+            <li><a href="#introduction">1. Introduction</a></li>
+            <li><a href="#forward-process">2. The Forward Diffusion Process</a></li>
+            <li><a href="#reverse-process">3. The Reverse Process</a></li>
+            <li><a href="#training">4. Training Objective</a></li>
+            <li><a href="#score-matching">5. Score Matching Perspective</a></li>
+            <li><a href="#ddim">6. Accelerated Sampling: DDIM</a></li>
+            <li><a href="#latent-diffusion">7. Latent Diffusion Models</a></li>
+            <li><a href="#conditioning">8. Conditioning and Guidance</a></li>
+            <li><a href="#dit">9. Diffusion Transformers</a></li>
+            <li><a href="#video">10. Video Diffusion Models</a></li>
+            <li><a href="#connections">11. Connections to Other Models</a></li>
+            <li><a href="#references">12. References</a></li>
+        </ul>
+    </div>
+
+    <h2 id="introduction">1. Introduction</h2>
+    
+    <p>
+        <strong>Diffusion models</strong>, also known as <strong>score-based generative models</strong>, 
+        have emerged as the dominant paradigm for generative modeling. They power state-of-the-art 
+        systems including Stable Diffusion, DALL-E 3, Midjourney, and OpenAI's Sora. The core 
+        idea is remarkably elegant: gradually destroy data by adding noise, then learn to 
+        reverse this corruption process.
+    </p>
+    
+    <p>
+        The theoretical foundations were established through two parallel lines of research: 
+        <strong>denoising diffusion probabilistic models (DDPM)</strong> by Ho et al. (2020), 
+        building on earlier work by Sohl-Dickstein et al. (2015), and <strong>score matching 
+        with Langevin dynamics</strong> by Song & Ermon (2019). Song et al. (2021) unified 
+        these perspectives through stochastic differential equations (SDEs), revealing them 
+        as two views of the same underlying framework.
+    </p>
+    
+    <div class="highlight-box">
+        <div class="highlight-box-title">Key Insight</div>
+        <p style="margin-bottom: 0;">
+            If we can learn to reverse small corruptions, we can start from pure noise and 
+            iteratively denoise to generate realistic data. The forward corruption process 
+            is fixed and trivial; all the modeling power lies in learning the reverse.
+        </p>
+    </div>
+    
+    <p>Why have diffusion models become so successful?</p>
+    <ul>
+        <li><strong>Stable training</strong>: Unlike GANs, there's no adversarial min-max game that can diverge</li>
+        <li><strong>Mode coverage</strong>: Unlike GANs, diffusion models don't suffer from mode collapse</li>
+        <li><strong>Theoretical foundation</strong>: Clear connection to variational inference and score matching</li>
+        <li><strong>Flexible conditioning</strong>: Natural mechanisms for text, class, and structural guidance</li>
+        <li><strong>High quality</strong>: State-of-the-art sample quality across images, audio, video, and 3D</li>
+    </ul>
+    
+    <p>
+        The main drawback is <strong>slow sampling</strong>: generation requires hundreds to thousands 
+        of sequential denoising steps. This has motivated extensive research into accelerated 
+        sampling methods, including DDIM, consistency models, and distillation techniques.
+    </p>
+
+    <h2 id="forward-process">2. The Forward Diffusion Process</h2>
+    
+    <p>
+        The <strong>forward process</strong> defines a Markov chain that gradually adds Gaussian 
+        noise to data over \(T\) timesteps. Starting from a data point \(x_0 \sim q(x_0)\), 
+        we construct a sequence \(x_1, x_2, \ldots, x_T\) where each step adds a small amount 
+        of noise:
+    </p>
+    
+    <div class="highlight-box definition">
+        <div class="highlight-box-title">Definition: Forward Process</div>
+        <p>
+            The forward process is defined as:
+        </p>
+        \[
+        q(x_t | x_{t-1}) = \mathcal{N}(x_t; \sqrt{1-\beta_t} \, x_{t-1}, \beta_t I)
+        \]
+        <p style="margin-bottom: 0;">
+            where \(\{\beta_t\}_{t=1}^T\) is the <strong>noise schedule</strong> with 
+            \(\beta_t \in (0, 1)\). The full forward process is:
+        </p>
+        \[
+        q(x_{1:T} | x_0) = \prod_{t=1}^T q(x_t | x_{t-1})
+        \]
+    </div>
+    
+    <p>
+        The variance schedule \(\{\beta_t\}\) controls how quickly information is destroyed. 
+        Small \(\beta_t\) values (e.g., \(10^{-4}\) to \(0.02\)) ensure the transition between 
+        adjacent timesteps is nearly Gaussian, which is crucial for the reverse process.
+    </p>
+    
+    <h3>2.1 Closed-Form Marginal</h3>
+    
+    <p>
+        A crucial property of the forward process is that we can sample \(x_t\) directly 
+        from \(x_0\) without iterating through intermediate steps. This is essential for 
+        efficient training.
+    </p>
+    
+    <div class="highlight-box theorem">
+        <div class="highlight-box-title">Theorem: Closed-Form Sampling</div>
+        <p>
+            Let \(\alpha_t = 1 - \beta_t\) and \(\bar{\alpha}_t = \prod_{s=1}^t \alpha_s\). Then:
+        </p>
+        \[
+        q(x_t | x_0) = \mathcal{N}(x_t; \sqrt{\bar{\alpha}_t} \, x_0, (1 - \bar{\alpha}_t) I)
+        \]
+        <p style="margin-bottom: 0;">
+            Equivalently, using the <strong>reparameterization trick</strong>:
+        </p>
+        \[
+        x_t = \sqrt{\bar{\alpha}_t} \, x_0 + \sqrt{1 - \bar{\alpha}_t} \, \epsilon, \quad \epsilon \sim \mathcal{N}(0, I)
+        \]
+    </div>
+    
+    <p><em>Proof sketch:</em> By induction, using the fact that the sum of independent Gaussians is Gaussian. At step \(t\):</p>
+    \[
+    x_t = \sqrt{\alpha_t} x_{t-1} + \sqrt{\beta_t} \epsilon_t = \sqrt{\alpha_t}(\sqrt{\bar{\alpha}_{t-1}} x_0 + \sqrt{1-\bar{\alpha}_{t-1}} \bar{\epsilon}_{t-1}) + \sqrt{\beta_t} \epsilon_t
+    \]
+    <p>
+        Combining the noise terms (using variance addition for independent Gaussians) yields the result.
+    </p>
+    
+    <h3>2.2 Noise Schedules</h3>
+    
+    <p>
+        The choice of \(\{\beta_t\}\) significantly affects generation quality. As \(t \to T\), 
+        we want \(\bar{\alpha}_T \approx 0\) so that \(x_T \approx \mathcal{N}(0, I)\)&mdash;pure noise 
+        with no information about \(x_0\).
+    </p>
+    
+    <p><strong>Linear schedule</strong> (original DDPM):</p>
+    \[
+    \beta_t = \beta_{\min} + \frac{t-1}{T-1}(\beta_{\max} - \beta_{\min})
+    \]
+    <p>
+        Typically \(\beta_{\min} = 10^{-4}\), \(\beta_{\max} = 0.02\), and \(T = 1000\).
+    </p>
+    
+    <p><strong>Cosine schedule</strong> (Nichol & Dhariwal, 2021):</p>
+    <p>
+        Designed so that \(\bar{\alpha}_t\) decreases smoothly from 1 to 0. The cosine schedule 
+        avoids the problem that linear schedules destroy too much information early in the 
+        process and too little near the end. It's defined implicitly through:
+    </p>
+    \[
+    \bar{\alpha}_t = \frac{f(t)}{f(0)}, \quad f(t) = \cos\left(\frac{t/T + s}{1 + s} \cdot \frac{\pi}{2}\right)^2
+    \]
+    <p>
+        where \(s\) is a small offset (typically 0.008) to prevent \(\beta_t\) from being 
+        too small at \(t = 0\).
+    </p>
+    
+    <div class="highlight-box example">
+        <div class="highlight-box-title">Practical Guidance: Schedule Selection</div>
+        <ul style="margin-bottom: 0;">
+            <li><strong>Linear</strong>: Simple, works well for most image generation tasks</li>
+            <li><strong>Cosine</strong>: Often better for high-resolution images, preserves more structure longer</li>
+            <li><strong>Scaled linear</strong>: Adjusted for latent diffusion where latent variance differs from pixel variance</li>
+        </ul>
+    </div>
+
+    <h2 id="reverse-process">3. The Reverse Process</h2>
+    
+    <p>
+        To generate data, we need to <strong>reverse</strong> the forward process: start from 
+        \(x_T \sim \mathcal{N}(0, I)\) and progressively denoise to obtain \(x_0\). The key 
+        insight is that for small \(\beta_t\), the reverse conditional \(q(x_{t-1} | x_t)\) 
+        is also approximately Gaussian.
+    </p>
+    
+    <h3>3.1 The Reverse Posterior</h3>
+    
+    <p>
+        While \(q(x_{t-1} | x_t)\) is intractable (it depends on the entire data distribution), 
+        \(q(x_{t-1} | x_t, x_0)\) has a closed form:
+    </p>
+    
+    <div class="highlight-box theorem">
+        <div class="highlight-box-title">Theorem: Reverse Posterior</div>
+        <p>
+            The posterior \(q(x_{t-1} | x_t, x_0)\) is Gaussian:
+        </p>
+        \[
+        q(x_{t-1} | x_t, x_0) = \mathcal{N}(x_{t-1}; \tilde{\mu}_t(x_t, x_0), \tilde{\beta}_t I)
+        \]
+        <p>where:</p>
+        \[
+        \tilde{\mu}_t(x_t, x_0) = \frac{\sqrt{\bar{\alpha}_{t-1}} \beta_t}{1 - \bar{\alpha}_t} x_0 + \frac{\sqrt{\alpha_t}(1 - \bar{\alpha}_{t-1})}{1 - \bar{\alpha}_t} x_t
+        \]
+        \[
+        \tilde{\beta}_t = \frac{1 - \bar{\alpha}_{t-1}}{1 - \bar{\alpha}_t} \beta_t
+        \]
+    </div>
+    
+    <p>
+        <em>Proof:</em> Apply Bayes' rule: \(q(x_{t-1} | x_t, x_0) \propto q(x_t | x_{t-1}) q(x_{t-1} | x_0)\). 
+        Both terms on the right are Gaussian, so their product is Gaussian. The mean and variance 
+        follow from completing the square.
+    </p>
+    
+    <h3>3.2 Learning the Reverse Process</h3>
+    
+    <p>
+        Since we don't know \(x_0\) during generation, we learn a neural network 
+        \(p_\theta(x_{t-1} | x_t)\) to approximate \(q(x_{t-1} | x_t)\). This is parameterized as:
+    </p>
+    
+    \[
+    p_\theta(x_{t-1} | x_t) = \mathcal{N}(x_{t-1}; \mu_\theta(x_t, t), \Sigma_\theta(x_t, t))
+    \]
+    
+    <p>
+        In practice, \(\Sigma_\theta\) is often fixed to \(\beta_t I\) or \(\tilde{\beta}_t I\), 
+        leaving only \(\mu_\theta\) to be learned. There are several equivalent parameterizations 
+        for the mean:
+    </p>
+    
+    <ol>
+        <li>
+            <strong>Predict \(\mu\) directly</strong>: The network outputs \(\mu_\theta(x_t, t)\)
+        </li>
+        <li>
+            <strong>Predict \(x_0\)</strong>: The network outputs \(\hat{x}_0 = f_\theta(x_t, t)\), 
+            then compute \(\mu\) using the formula for \(\tilde{\mu}_t\)
+        </li>
+        <li>
+            <strong>Predict \(\epsilon\)</strong> (the standard choice): The network outputs 
+            \(\epsilon_\theta(x_t, t)\) predicting the noise that was added. Since 
+            \(x_0 = (x_t - \sqrt{1 - \bar{\alpha}_t} \epsilon) / \sqrt{\bar{\alpha}_t}\), 
+            this uniquely determines \(\mu_\theta\)
+        </li>
+    </ol>
+    
+    <div class="highlight-box">
+        <div class="highlight-box-title">Why Predict Noise?</div>
+        <p style="margin-bottom: 0;">
+            Predicting \(\epsilon\) has been found to work best empirically. Intuitively, 
+            the noise \(\epsilon\) has constant variance across timesteps, while \(x_0\) 
+            becomes increasingly uncertain as \(t\) grows. The \(\epsilon\)-prediction 
+            provides a more stable learning signal.
+        </p>
+    </div>
+
+    <h2 id="training">4. Training Objective</h2>
+    
+    <p>
+        Diffusion models are trained by maximizing a variational lower bound (ELBO) on the 
+        log-likelihood. The derivation closely parallels that of VAEs.
+    </p>
+    
+    <h3>4.1 Variational Lower Bound</h3>
+    
+    <p>Starting from the marginal log-likelihood:</p>
+    \[
+    \log p_\theta(x_0) = \log \int p_\theta(x_{0:T}) \, dx_{1:T}
+    \]
+    
+    <p>Introducing the forward process as a variational distribution:</p>
+    \[
+    \log p_\theta(x_0) \geq \mathbb{E}_{q(x_{1:T}|x_0)} \left[ \log \frac{p_\theta(x_{0:T})}{q(x_{1:T}|x_0)} \right] = -\mathcal{L}_{VLB}
+    \]
+    
+    <p>The VLB can be decomposed into interpretable terms:</p>
+    
+    <div class="math-display">
+        \[
+        \mathcal{L}_{VLB} = \underbrace{D_{KL}(q(x_T|x_0) \| p(x_T))}_{\mathcal{L}_T} + 
+        \sum_{t=2}^{T} \underbrace{D_{KL}(q(x_{t-1}|x_t, x_0) \| p_\theta(x_{t-1}|x_t))}_{\mathcal{L}_{t-1}} - 
+        \underbrace{\log p_\theta(x_0|x_1)}_{\mathcal{L}_0}
+        \]
+    </div>
+    
+    <ul>
+        <li>\(\mathcal{L}_T\): Prior matching term. Since both \(q(x_T|x_0)\) and \(p(x_T)\) are 
+            near \(\mathcal{N}(0, I)\) for large \(T\), this is approximately zero.</li>
+        <li>\(\mathcal{L}_{t-1}\): Denoising matching terms. The model must match the true 
+            reverse posteriors.</li>
+        <li>\(\mathcal{L}_0\): Reconstruction term, typically modeled with a discretized decoder.</li>
+    </ul>
+    
+    <h3>4.2 The Simplified Objective</h3>
+    
+    <p>
+        Ho et al. (2020) showed that a simplified objective works better in practice:
+    </p>
+    
+    <div class="highlight-box definition">
+        <div class="highlight-box-title">Definition: DDPM Training Objective</div>
+        \[
+        \mathcal{L}_{simple} = \mathbb{E}_{t \sim \mathcal{U}(1,T), x_0 \sim q(x_0), \epsilon \sim \mathcal{N}(0,I)} \left[ \| \epsilon - \epsilon_\theta(x_t, t) \|^2 \right]
+        \]
+        <p style="margin-bottom: 0;">
+            where \(x_t = \sqrt{\bar{\alpha}_t} x_0 + \sqrt{1 - \bar{\alpha}_t} \epsilon\).
+        </p>
+    </div>
+    
+    <p>
+        This is simply <strong>mean squared error between predicted and actual noise</strong>! 
+        The network is trained as a denoiser for all noise levels simultaneously, with \(t\) 
+        sampled uniformly.
+    </p>
+    
+    <p>
+        <em>Why does this work?</em> The simplified objective is a reweighted version of the VLB. 
+        It places equal weight on all timesteps, which empirically produces better sample 
+        quality than the VLB weighting (which emphasizes early timesteps where reconstruction 
+        error is small).
+    </p>
+
+    <h2 id="score-matching">5. Score Matching Perspective</h2>
+    
+    <p>
+        An alternative and illuminating view comes from <strong>score matching</strong>. 
+        The <strong>score function</strong> of a distribution \(p(x)\) is the gradient of its 
+        log-density:
+    </p>
+    
+    \[
+    s(x) = \nabla_x \log p(x)
+    \]
+    
+    <h3>5.1 Score Function Intuition</h3>
+    
+    <p>
+        The score points in the direction of increasing probability. If we can estimate the 
+        score, we can generate samples using <strong>Langevin dynamics</strong>:
+    </p>
+    
+    \[
+    x_{i+1} = x_i + \frac{\eta}{2} \nabla_x \log p(x_i) + \sqrt{\eta} \, z_i, \quad z_i \sim \mathcal{N}(0, I)
+    \]
+    
+    <p>
+        As \(\eta \to 0\) and the number of steps \(\to \infty\), samples from this chain 
+        converge to samples from \(p(x)\).
+    </p>
+    
+    <h3>5.2 Noise Conditional Score</h3>
+    
+    <p>
+        Direct score estimation fails in practice because the data distribution has low 
+        support in high-dimensional space. The key insight of Song & Ermon (2019) is to 
+        estimate scores of <em>noise-perturbed</em> data distributions \(q_\sigma(x) = \int q(x') \mathcal{N}(x; x', \sigma^2 I) dx'\).
+    </p>
+    
+    <p>
+        For Gaussian perturbation, the score of the noisy distribution has a beautiful form:
+    </p>
+    
+    <div class="highlight-box theorem">
+        <div class="highlight-box-title">Theorem: Score-Noise Relationship</div>
+        \[
+        \nabla_x \log q_\sigma(x) = -\frac{x - \mathbb{E}[x_0 | x]}{\sigma^2} = -\frac{\epsilon}{\sigma}
+        \]
+        <p style="margin-bottom: 0;">
+            where \(\epsilon\) is the noise that was added to \(x_0\) to obtain \(x\). 
+            Thus, <strong>predicting noise is equivalent to predicting the score</strong> (up to scaling).
+        </p>
+    </div>
+    
+    <h3>5.3 Unified SDE Framework</h3>
+    
+    <p>
+        Song et al. (2021) unified discrete-time diffusion and score matching through 
+        <strong>stochastic differential equations (SDEs)</strong>. The forward process is 
+        described by:
+    </p>
+    
+    \[
+    dx = f(x, t) \, dt + g(t) \, dw
+    \]
+    
+    <p>
+        where \(f\) is the drift, \(g\) is the diffusion coefficient, and \(w\) is a Wiener 
+        process. Remarkably, there exists a reverse-time SDE:
+    </p>
+    
+    \[
+    dx = [f(x, t) - g(t)^2 \nabla_x \log p_t(x)] \, dt + g(t) \, d\bar{w}
+    \]
+    
+    <p>
+        where \(\bar{w}\) is a reverse-time Wiener process and \(p_t(x)\) is the marginal 
+        density at time \(t\). This reveals that the score function \(\nabla_x \log p_t(x)\) 
+        is all we need to reverse the diffusion.
+    </p>
+    
+    <div class="highlight-box">
+        <div class="highlight-box-title">The Probability Flow ODE</div>
+        <p style="margin-bottom: 0;">
+            For any diffusion SDE, there exists a deterministic ODE with identical marginal 
+            densities at all times:
+        </p>
+        \[
+        dx = \left[ f(x, t) - \frac{1}{2} g(t)^2 \nabla_x \log p_t(x) \right] dt
+        \]
+        <p style="margin-bottom: 0;">
+            This <strong>probability flow ODE</strong> enables deterministic sampling 
+            (used in DDIM) and exact likelihood computation via the change of variables formula.
+        </p>
+    </div>
+
+    <h2 id="ddim">6. Accelerated Sampling: DDIM</h2>
+    
+    <p>
+        Standard DDPM sampling requires \(T \approx 1000\) steps, which is slow. 
+        <strong>Denoising Diffusion Implicit Models (DDIM)</strong> by Song et al. (2020) 
+        enable faster sampling with far fewer steps using the same trained model.
+    </p>
+    
+    <h3>6.1 Key Insight</h3>
+    
+    <p>
+        The forward marginals \(q(x_t | x_0)\) are uniquely defined, but there are 
+        <em>many</em> joint distributions \(q(x_{1:T} | x_0)\) that yield the same marginals. 
+        DDPM uses a specific Markovian joint, but we can choose a different, <em>non-Markovian</em> 
+        process that permits larger jumps.
+    </p>
+    
+    <h3>6.2 DDIM Update Rule</h3>
+    
+    <div class="highlight-box definition">
+        <div class="highlight-box-title">Definition: DDIM Sampling</div>
+        <p>Given the predicted noise \(\epsilon_\theta(x_t, t)\), the DDIM update is:</p>
+        \[
+        x_{t-1} = \sqrt{\bar{\alpha}_{t-1}} \underbrace{\left( \frac{x_t - \sqrt{1-\bar{\alpha}_t} \, \epsilon_\theta(x_t, t)}{\sqrt{\bar{\alpha}_t}} \right)}_{\text{predicted } x_0} + 
+        \sqrt{1 - \bar{\alpha}_{t-1} - \sigma_t^2} \, \epsilon_\theta(x_t, t) + \sigma_t \epsilon
+        \]
+        <p style="margin-bottom: 0;">
+            where \(\sigma_t\) controls stochasticity. Setting \(\sigma_t = 0\) gives 
+            <strong>deterministic sampling</strong>.
+        </p>
+    </div>
+    
+    <p>
+        Crucially, DDIM can use a <strong>subsequence</strong> of timesteps 
+        (e.g., \(\{100, 200, 300, \ldots, 1000\}\) instead of all 1000). With 50-100 
+        steps, DDIM produces samples comparable to 1000-step DDPM.
+    </p>
+    
+    <h3>6.3 Deterministic Generation</h3>
+    
+    <p>
+        When \(\sigma_t = 0\), DDIM is deterministic: the same initial noise \(x_T\) always 
+        produces the same output \(x_0\). This enables:
+    </p>
+    <ul>
+        <li><strong>Semantic interpolation</strong>: Interpolate in noise space for smooth transitions</li>
+        <li><strong>Inversion</strong>: Given \(x_0\), find the \(x_T\) that produces it (useful for editing)</li>
+        <li><strong>Consistent reconstruction</strong>: Deterministic mapping from noise to image</li>
+    </ul>
+
+    <h2 id="latent-diffusion">7. Latent Diffusion Models</h2>
+    
+    <p>
+        Operating diffusion in <strong>pixel space</strong> is computationally expensive: 
+        a 512×512×3 image has 786,432 dimensions. <strong>Latent Diffusion Models (LDM)</strong> 
+        by Rombach et al. (2022) perform diffusion in a compressed latent space, dramatically 
+        reducing computational cost while maintaining quality.
+    </p>
+    
+    <h3>7.1 Two-Stage Approach</h3>
+    
+    <p>LDM consists of two decoupled stages:</p>
+    
+    <ol>
+        <li>
+            <strong>Perceptual compression</strong>: Train an autoencoder (typically VQ-VAE or 
+            KL-regularized VAE) to compress images \(x\) to latents \(z = \mathcal{E}(x)\) 
+            and reconstruct \(\hat{x} = \mathcal{D}(z)\).
+        </li>
+        <li>
+            <strong>Latent diffusion</strong>: Train a diffusion model in the latent space \(z\). 
+            The compression ratio is typically 8× (e.g., 512×512×3 → 64×64×4), yielding 
+            a 48× reduction in dimensionality.
+        </li>
+    </ol>
+    
+    <h3>7.2 Why Latent Space Works</h3>
+    
+    <p>
+        The key insight is that perceptual quality depends primarily on semantic content, 
+        not pixel-level details. The autoencoder removes imperceptible high-frequency details 
+        while preserving semantically important structure. Diffusion then operates only on 
+        this semantically meaningful latent space.
+    </p>
+    
+    <div class="highlight-box">
+        <div class="highlight-box-title">Autoencoder Requirements</div>
+        <p style="margin-bottom: 0;">
+            The autoencoder must be trained with <strong>perceptual losses</strong> (comparing 
+            features from pretrained networks like VGG) and <strong>adversarial losses</strong> 
+            to ensure sharp reconstructions. Simple MSE loss produces blurry results.
+        </p>
+    </div>
+    
+    <h3>7.3 Text Conditioning via Cross-Attention</h3>
+    
+    <p>
+        LDM introduced <strong>cross-attention</strong> as the primary mechanism for 
+        conditioning on text. The denoising U-Net contains attention layers where:
+    </p>
+    
+    <ul>
+        <li><strong>Query (\(Q\))</strong>: Comes from spatial image features</li>
+        <li><strong>Key (\(K\)) and Value (\(V\))</strong>: Come from text embeddings (e.g., from CLIP or T5)</li>
+    </ul>
+    
+    \[
+    \text{Attention}(Q, K, V) = \text{softmax}\left(\frac{QK^T}{\sqrt{d}}\right) V
+    \]
+    
+    <p>
+        This allows each spatial location in the image to attend to relevant parts of the 
+        text prompt, enabling fine-grained text-image alignment.
+    </p>
+
+    <h2 id="conditioning">8. Conditioning and Guidance</h2>
+    
+    <p>
+        Controlling diffusion models with conditions (text, class labels, images) is essential 
+        for practical applications. Two main approaches exist: <strong>classifier guidance</strong> 
+        and <strong>classifier-free guidance</strong>.
+    </p>
+    
+    <h3>8.1 Classifier Guidance</h3>
+    
+    <p>
+        Dhariwal & Nichol (2021) showed that a pretrained classifier \(p_\phi(y | x_t)\) 
+        can guide generation toward class \(y\). Using Bayes' rule on scores:
+    </p>
+    
+    \[
+    \nabla_{x_t} \log p(x_t | y) = \nabla_{x_t} \log p(x_t) + \nabla_{x_t} \log p(y | x_t)
+    \]
+    
+    <p>
+        The modified score adds the classifier gradient, pushing samples toward regions 
+        classified as \(y\):
+    </p>
+    
+    \[
+    \tilde{\epsilon}_\theta = \epsilon_\theta(x_t, t) - \sqrt{1 - \bar{\alpha}_t} \cdot s \cdot \nabla_{x_t} \log p_\phi(y | x_t)
+    \]
+    
+    <p>
+        where \(s > 0\) is the guidance scale. Higher \(s\) means stronger conditioning but 
+        reduced diversity.
+    </p>
+    
+    <h3>8.2 Classifier-Free Guidance</h3>
+    
+    <p>
+        Classifier guidance requires training a separate classifier on noisy images. 
+        <strong>Classifier-Free Guidance (CFG)</strong> by Ho & Salimans (2022) achieves 
+        similar effects without any classifier.
+    </p>
+    
+    <div class="highlight-box definition">
+        <div class="highlight-box-title">Definition: Classifier-Free Guidance</div>
+        <p><strong>Training:</strong> Randomly drop the condition \(c\) with probability 
+        \(p_{uncond}\) (typically 10%), replacing it with a null token \(\emptyset\). 
+        This trains a single model for both conditional \(\epsilon_\theta(x_t, t, c)\) 
+        and unconditional \(\epsilon_\theta(x_t, t, \emptyset)\) generation.</p>
+        
+        <p style="margin-bottom: 0;"><strong>Sampling:</strong> Extrapolate away from the unconditional direction:</p>
+        \[
+        \tilde{\epsilon}_\theta = \epsilon_\theta(x_t, t, \emptyset) + w \cdot (\epsilon_\theta(x_t, t, c) - \epsilon_\theta(x_t, t, \emptyset))
+        \]
+        <p style="margin-bottom: 0;">where \(w > 1\) is the guidance scale (typically 7-12 for text-to-image).</p>
+    </div>
+    
+    <p>
+        CFG has become the standard approach due to its simplicity and effectiveness. 
+        It can be interpreted as moving the score estimate further in the "conditional direction" 
+        relative to the unconditional baseline.
+    </p>
+    
+    <h3>8.3 Structural Conditioning: ControlNet</h3>
+    
+    <p>
+        While text controls semantics, it struggles with precise spatial structure. 
+        <strong>ControlNet</strong> (Zhang et al., 2023) adds structural conditions 
+        (edges, depth maps, poses) by:
+    </p>
+    
+    <ol>
+        <li>Copying the encoder of a pretrained U-Net</li>
+        <li>Adding <strong>zero-initialized convolutions</strong> to connect the copy to the original</li>
+        <li>Training only the copy on paired (image, structure) data</li>
+    </ol>
+    
+    <p>
+        The zero initialization ensures the pretrained model is preserved at the start of 
+        training. The locked original model provides strong image priors while the trainable 
+        copy learns to inject structural control.
+    </p>
+
+    <h2 id="dit">9. Diffusion Transformers</h2>
+    
+    <p>
+        The <strong>U-Net</strong> architecture dominated early diffusion models, but 
+        <strong>Transformers</strong> offer advantages in scaling behavior. 
+        <strong>Diffusion Transformer (DiT)</strong> by Peebles & Xie (2023) showed that 
+        Transformers can match or exceed U-Net performance while following predictable scaling laws.
+    </p>
+    
+    <h3>9.1 From U-Net to Transformer</h3>
+    
+    <table>
+        <thead>
+            <tr>
+                <th>Aspect</th>
+                <th>U-Net</th>
+                <th>DiT</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Input processing</td>
+                <td>Convolutions</td>
+                <td>Patchify (like ViT)</td>
+            </tr>
+            <tr>
+                <td>Core operations</td>
+                <td>ResBlocks + Attention</td>
+                <td>Transformer blocks</td>
+            </tr>
+            <tr>
+                <td>Multi-scale</td>
+                <td>Encoder-decoder with skip connections</td>
+                <td>Single scale (all patches)</td>
+            </tr>
+            <tr>
+                <td>Conditioning</td>
+                <td>Cross-attention, adaptive norm</td>
+                <td>AdaLN (Adaptive LayerNorm)</td>
+            </tr>
+            <tr>
+                <td>Scaling</td>
+                <td>Complex (many hyperparameters)</td>
+                <td>Simple (depth, width, heads)</td>
+            </tr>
+        </tbody>
+    </table>
+    
+    <h3>9.2 AdaLN-Zero</h3>
+    
+    <p>
+        DiT conditions on timestep and class label by modulating LayerNorm parameters. 
+        The condition embedding produces scale (\(\gamma\)), shift (\(\beta\)), and 
+        gate (\(\alpha\)) parameters:
+    </p>
+    
+    \[
+    \text{AdaLN}(x, c) = \gamma(c) \cdot \text{LayerNorm}(x) + \beta(c)
+    \]
+    
+    <p>
+        The <strong>"Zero"</strong> refers to initializing the final linear layer to output 
+        zeros. This makes each DiT block an identity function at initialization, which 
+        stabilizes training of deep networks (similar to ReZero and other techniques).
+    </p>
+    
+    <h3>9.3 Scaling Laws</h3>
+    
+    <p>
+        A key finding of DiT is that diffusion Transformers follow <strong>scaling laws</strong> 
+        similar to language models: performance improves predictably with increased compute, 
+        model size, and data. This makes DiT architectures attractive for large-scale training, 
+        as exemplified by systems like Sora.
+    </p>
+    
+    <div class="highlight-box">
+        <div class="highlight-box-title">DiT Scaling Results</div>
+        <p style="margin-bottom: 0;">
+            On ImageNet 256×256, DiT-XL/2 (675M parameters) achieved FID 2.27, outperforming 
+            prior diffusion models. Larger models consistently yield better FID, with the 
+            scaling trend showing no signs of saturation.
+        </p>
+    </div>
+
+    <h2 id="video">10. Video Diffusion Models</h2>
+    
+    <p>
+        Extending diffusion to video introduces the challenge of <strong>temporal consistency</strong>: 
+        objects must move smoothly and maintain their identity across frames. Video diffusion 
+        models must jointly model spatial content and temporal dynamics.
+    </p>
+    
+    <h3>10.1 Temporal Modeling Strategies</h3>
+    
+    <p>Several architectural approaches have been explored:</p>
+    
+    <ol>
+        <li>
+            <strong>3D Convolutions</strong>: Replace 2D convolutions with 3D (sometimes called 
+            "inflating" a 2D model). Captures local spatio-temporal patterns.
+        </li>
+        <li>
+            <strong>Temporal Attention</strong>: Add attention across the time dimension, 
+            allowing frames to communicate. Often used with "factorized" attention that 
+            separates spatial and temporal attention for efficiency.
+        </li>
+        <li>
+            <strong>Causal vs. Bidirectional</strong>: Causal attention (each frame sees only 
+            past frames) enables autoregressive generation; bidirectional attention allows 
+            global temporal reasoning but requires all frames to be generated together.
+        </li>
+    </ol>
+    
+    <h3>10.2 Video Compression</h3>
+    
+    <p>
+        Videos are even more computationally demanding than images. <strong>Video VAEs</strong> 
+        compress both spatially and temporally. For example, compressing 64 frames at 256×256 
+        by 8× spatially and 4× temporally yields 16×32×32 latents—a massive reduction enabling 
+        practical training and inference.
+    </p>
+    
+    <h3>10.3 Training Strategies</h3>
+    
+    <p>
+        Video data is scarcer than image data, so several techniques help:
+    </p>
+    
+    <ul>
+        <li>
+            <strong>Image pretraining + video finetuning</strong>: Train spatial layers on images, 
+            then add and train temporal layers on video (with spatial layers frozen or at low learning rate)
+        </li>
+        <li>
+            <strong>Joint image-video training</strong>: Train on both images (as single-frame videos) 
+            and videos, leveraging abundant image data
+        </li>
+        <li>
+            <strong>Progressive training</strong>: Start with low resolution and few frames, 
+            gradually increase both during training
+        </li>
+    </ul>
+    
+    <h3>10.4 Modern Architectures: Sora</h3>
+    
+    <p>
+        OpenAI's <strong>Sora</strong> (2024) represents the current frontier. Based on 
+        the technical report, key innovations include:
+    </p>
+    
+    <ul>
+        <li><strong>Spacetime patches</strong>: 3D patches that jointly capture spatial and temporal information</li>
+        <li><strong>DiT for video</strong>: Transformer architecture scaled to massive size</li>
+        <li><strong>Variable resolution/duration</strong>: Training on native aspect ratios and lengths, avoiding cropping</li>
+        <li><strong>Emergent capabilities</strong>: At scale, Sora demonstrates 3D consistency, object permanence, and basic physics understanding</li>
+    </ul>
+    
+    <div class="highlight-box example">
+        <div class="highlight-box-title">Open Source Alternatives</div>
+        <ul style="margin-bottom: 0;">
+            <li><strong>Open-Sora</strong>: Community effort to replicate Sora architecture</li>
+            <li><strong>CogVideoX</strong>: Tsinghua/Zhipu's open model with detailed technical report, featuring 3D VAE and Mixture of Experts</li>
+        </ul>
+    </div>
+
+    <h2 id="connections">11. Connections to Other Models</h2>
+    
+    <h3>11.1 Diffusion and VAEs</h3>
+    
+    <p>
+        Diffusion models can be viewed as <strong>hierarchical VAEs</strong> with a specific structure:
+    </p>
+    <ul>
+        <li>Infinitely many (or very many) latent levels corresponding to timesteps</li>
+        <li>Fixed, non-learned forward process (the "encoder")</li>
+        <li>Markovian structure in both directions</li>
+        <li>Gaussian transitions throughout</li>
+    </ul>
+    
+    <p>
+        Both optimize variational bounds on log-likelihood. The ELBO derivation for diffusion 
+        models is essentially the hierarchical VAE ELBO with the specific forward process constraints.
+    </p>
+    
+    <h3>11.2 Diffusion and Energy-Based Models</h3>
+    
+    <p>
+        Score matching connects diffusion to <strong>energy-based models (EBMs)</strong>. 
+        An EBM defines \(p(x) \propto \exp(-E_\theta(x))\), with score \(\nabla_x \log p(x) = -\nabla_x E_\theta(x)\). 
+        Score-based diffusion models essentially learn a sequence of energy functions (one 
+        per noise level) without explicit normalization.
+    </p>
+    
+    <h3>11.3 Diffusion and Normalizing Flows</h3>
+    
+    <p>
+        The probability flow ODE reveals connections to <strong>continuous normalizing flows (CNFs)</strong>. 
+        Both define deterministic transformations from simple distributions to data distributions. 
+        Diffusion models can be seen as CNFs where the velocity field is constrained to depend 
+        on the score, which is learned via denoising.
+    </p>
+    
+    <h3>11.4 Diffusion and GANs</h3>
+    
+    <p>
+        While GANs and diffusion models both generate samples, they differ fundamentally:
+    </p>
+    <ul>
+        <li>GANs use adversarial training; diffusion uses likelihood-based training</li>
+        <li>GANs generate in one forward pass; diffusion requires iterative sampling</li>
+        <li>GANs often have mode collapse; diffusion typically covers all modes</li>
+        <li>GANs have unstable training; diffusion training is stable</li>
+    </ul>
+    <p>
+        These differences explain why diffusion has largely replaced GANs for high-quality 
+        generation, despite the sampling speed disadvantage.
+    </p>
+
+    <h2 id="references">12. References</h2>
+    
+    <ol>
+        <li>
+            Ho, J., Jain, A., & Abbeel, P. (2020). 
+            <em>Denoising Diffusion Probabilistic Models.</em> NeurIPS 2020.
+            <a href="https://arxiv.org/abs/2006.11239">[arXiv]</a>
+        </li>
+        <li>
+            Song, Y., & Ermon, S. (2019). 
+            <em>Generative Modeling by Estimating Gradients of the Data Distribution.</em> NeurIPS 2019.
+            <a href="https://arxiv.org/abs/1907.05600">[arXiv]</a>
+        </li>
+        <li>
+            Song, Y., Sohl-Dickstein, J., Kingma, D. P., Kumar, A., Ermon, S., & Poole, B. (2021). 
+            <em>Score-Based Generative Modeling through Stochastic Differential Equations.</em> ICLR 2021.
+            <a href="https://arxiv.org/abs/2011.13456">[arXiv]</a>
+        </li>
+        <li>
+            Song, J., Meng, C., & Ermon, S. (2021). 
+            <em>Denoising Diffusion Implicit Models.</em> ICLR 2021.
+            <a href="https://arxiv.org/abs/2010.02502">[arXiv]</a>
+        </li>
+        <li>
+            Rombach, R., Blattmann, A., Lorenz, D., Esser, P., & Ommer, B. (2022). 
+            <em>High-Resolution Image Synthesis with Latent Diffusion Models.</em> CVPR 2022.
+            <a href="https://arxiv.org/abs/2112.10752">[arXiv]</a>
+        </li>
+        <li>
+            Ho, J., & Salimans, T. (2022). 
+            <em>Classifier-Free Diffusion Guidance.</em> NeurIPS Workshop 2021.
+            <a href="https://arxiv.org/abs/2207.12598">[arXiv]</a>
+        </li>
+        <li>
+            Dhariwal, P., & Nichol, A. (2021). 
+            <em>Diffusion Models Beat GANs on Image Synthesis.</em> NeurIPS 2021.
+            <a href="https://arxiv.org/abs/2105.05233">[arXiv]</a>
+        </li>
+        <li>
+            Peebles, W., & Xie, S. (2023). 
+            <em>Scalable Diffusion Models with Transformers.</em> ICCV 2023.
+            <a href="https://arxiv.org/abs/2212.09748">[arXiv]</a>
+        </li>
+        <li>
+            Zhang, L., Rao, A., & Agrawala, M. (2023). 
+            <em>Adding Conditional Control to Text-to-Image Diffusion Models.</em> ICCV 2023.
+            <a href="https://arxiv.org/abs/2302.05543">[arXiv]</a>
+        </li>
+        <li>
+            Ho, J., Salimans, T., Gritsenko, A., Chan, W., Norouzi, M., & Fleet, D. J. (2022). 
+            <em>Video Diffusion Models.</em> NeurIPS 2022.
+            <a href="https://arxiv.org/abs/2204.03458">[arXiv]</a>
+        </li>
+        <li>
+            OpenAI. (2024). 
+            <em>Sora: Video Generation Models as World Simulators.</em> Technical Report.
+            <a href="https://openai.com/sora">[OpenAI]</a>
+        </li>
+        <li>
+            Yang, Z., et al. (2024). 
+            <em>CogVideoX: Text-to-Video Diffusion Models with An Expert Transformer.</em>
+            <a href="https://arxiv.org/abs/2408.06072">[arXiv]</a>
+        </li>
+        <li>
+            Nichol, A., & Dhariwal, P. (2021). 
+            <em>Improved Denoising Diffusion Probabilistic Models.</em> ICML 2021.
+            <a href="https://arxiv.org/abs/2102.09672">[arXiv]</a>
+        </li>
+        <li>
+            Sohl-Dickstein, J., Weiss, E., Maheswaranathan, N., & Ganguli, S. (2015). 
+            <em>Deep Unsupervised Learning using Nonequilibrium Thermodynamics.</em> ICML 2015.
+            <a href="https://arxiv.org/abs/1503.03585">[arXiv]</a>
+        </li>
+    </ol>
+
+    <footer>
+        <p>
+            <a href="../index.html">&larr; Back to homepage</a> &middot; 
+            Last updated: January 2026
+        </p>
+    </footer>
+</body>
+</html>
