@@ -1,0 +1,898 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test-Time Training: A Theoretical Introduction - Fukang Wen</title>
+    <meta name="description" content="A comprehensive theoretical introduction to Test-Time Training, from distribution shift adaptation to TTT layers.">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700;900&family=STIX+Two+Math&display=swap" rel="stylesheet">
+    
+    <!-- MathJax -->
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Lato', Georgia, serif;
+            font-size: 17px;
+            line-height: 1.8;
+            color: #333;
+            background-color: #fff;
+            max-width: 780px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+        
+        a {
+            color: #1772d0;
+            text-decoration: none;
+        }
+        
+        a:hover {
+            color: #f09228;
+        }
+        
+        .back-link {
+            display: inline-block;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        
+        h1 {
+            font-size: 32px;
+            font-weight: 900;
+            margin-bottom: 10px;
+            line-height: 1.3;
+        }
+        
+        .meta {
+            color: #666;
+            font-size: 15px;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        h2 {
+            font-size: 24px;
+            font-weight: 700;
+            margin-top: 40px;
+            margin-bottom: 15px;
+            color: #1772d0;
+        }
+        
+        h3 {
+            font-size: 20px;
+            font-weight: 700;
+            margin-top: 30px;
+            margin-bottom: 10px;
+        }
+        
+        p {
+            margin-bottom: 18px;
+            text-align: justify;
+        }
+        
+        .highlight-box {
+            background: #f8f9fa;
+            border-left: 4px solid #1772d0;
+            padding: 20px;
+            margin: 25px 0;
+            border-radius: 0 5px 5px 0;
+        }
+        
+        .highlight-box.definition {
+            border-left-color: #28a745;
+            background: #f0fff4;
+        }
+        
+        .highlight-box.theorem {
+            border-left-color: #dc3545;
+            background: #fff5f5;
+        }
+        
+        .highlight-box.example {
+            border-left-color: #ffc107;
+            background: #fffbf0;
+        }
+        
+        .highlight-box-title {
+            font-weight: 700;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        
+        code {
+            font-family: 'Consolas', 'Monaco', monospace;
+            background: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 14px;
+        }
+        
+        pre {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 20px;
+            border-radius: 5px;
+            overflow-x: auto;
+            margin: 20px 0;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        
+        pre code {
+            background: none;
+            padding: 0;
+            color: inherit;
+        }
+        
+        ul, ol {
+            margin: 15px 0 15px 30px;
+        }
+        
+        li {
+            margin-bottom: 8px;
+        }
+        
+        .figure {
+            text-align: center;
+            margin: 30px 0;
+        }
+        
+        .figure img {
+            max-width: 100%;
+            border-radius: 5px;
+        }
+        
+        .figure-caption {
+            font-size: 14px;
+            color: #666;
+            margin-top: 10px;
+            font-style: italic;
+        }
+        
+        .toc {
+            background: #f8f9fa;
+            padding: 20px 30px;
+            border-radius: 5px;
+            margin-bottom: 30px;
+        }
+        
+        .toc-title {
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+        
+        .toc ul {
+            margin: 0;
+            list-style: none;
+        }
+        
+        .toc li {
+            margin-bottom: 5px;
+        }
+        
+        .toc a {
+            color: #555;
+        }
+        
+        .toc a:hover {
+            color: #1772d0;
+        }
+        
+        .math-display {
+            overflow-x: auto;
+            margin: 20px 0;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 25px 0;
+            font-size: 15px;
+        }
+        
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        th {
+            background: #f8f9fa;
+            font-weight: 700;
+        }
+
+        footer {
+            margin-top: 60px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+            font-size: 14px;
+            color: #999;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <a href="../index.html" class="back-link">&larr; Back to homepage</a>
+    
+    <h1>Test-Time Training: A Theoretical Introduction</h1>
+    
+    <div class="meta">
+        <strong>Fukang Wen</strong> &middot; January 2026 &middot; 
+        <span>Tags: Test-Time Training, Distribution Shift, Self-Supervised Learning, Sequence Modeling, TTT Layers</span>
+    </div>
+
+    <div class="toc">
+        <div class="toc-title">Table of Contents</div>
+        <ul>
+            <li><a href="#introduction">1. Introduction</a></li>
+            <li><a href="#distribution-shift">2. The Distribution Shift Problem</a></li>
+            <li><a href="#original-ttt">3. Original Test-Time Training</a></li>
+            <li><a href="#ttt-variants">4. TTT Variants and Extensions</a></li>
+            <li><a href="#ttt-layers">5. TTT as Sequence Modeling Layers</a></li>
+            <li><a href="#ttt-linear">6. TTT-Linear: Linear Hidden States</a></li>
+            <li><a href="#ttt-mlp">7. TTT-MLP: Nonlinear Hidden States</a></li>
+            <li><a href="#comparison">8. Comparison with Transformers and RNNs</a></li>
+            <li><a href="#applications">9. Applications</a></li>
+            <li><a href="#connections">10. Connections to Other Paradigms</a></li>
+            <li><a href="#references">11. References</a></li>
+        </ul>
+    </div>
+
+    <h2 id="introduction">1. Introduction</h2>
+    
+    <p>
+        <strong>Test-Time Training (TTT)</strong> refers to a family of techniques that adapt 
+        machine learning models during inference, using the test data itself. Unlike 
+        traditional machine learning where models are fixed after training, TTT continues 
+        learning at test time, enabling adaptation to new distributions and contexts.
+    </p>
+    
+    <p>
+        The concept has evolved through two major phases:
+    </p>
+    
+    <ol>
+        <li>
+            <strong>TTT for Robustness (2019-2023)</strong>: Adapting pretrained models to 
+            handle distribution shifts by performing self-supervised learning on each test 
+            sample before making predictions.
+        </li>
+        <li>
+            <strong>TTT Layers (2024)</strong>: Incorporating TTT as a fundamental 
+            architectural component, where the hidden state of a sequence model is itself 
+            a machine learning model that is trained during the forward pass.
+        </li>
+    </ol>
+    
+    <div class="highlight-box">
+        <div class="highlight-box-title">Key Insight</div>
+        <p style="margin-bottom: 0;">
+            The central idea of TTT is to treat inference as a learning problem. Instead of 
+            using fixed features, the model updates its representations based on the specific 
+            test input, effectively customizing itself to each new situation.
+        </p>
+    </div>
+    
+    <p>Why is TTT important?</p>
+    <ul>
+        <li><strong>Distribution shift</strong>: Real-world test data often differs from training data</li>
+        <li><strong>Personalization</strong>: Models can adapt to individual users or contexts</li>
+        <li><strong>Long context</strong>: TTT layers can process long sequences with linear complexity while maintaining expressiveness</li>
+        <li><strong>Continual learning</strong>: Natural framework for learning from streaming data</li>
+    </ul>
+
+    <h2 id="distribution-shift">2. The Distribution Shift Problem</h2>
+    
+    <p>
+        Machine learning models typically assume that training and test data come from 
+        the same distribution. This assumption is often violated in practice, leading 
+        to significant performance degradation.
+    </p>
+    
+    <h3>2.1 Types of Distribution Shift</h3>
+    
+    <div class="highlight-box definition">
+        <div class="highlight-box-title">Definition: Covariate Shift</div>
+        <p style="margin-bottom: 0;">
+            <strong>Covariate shift</strong> occurs when the input distribution changes 
+            while the conditional output distribution remains the same:
+        </p>
+        \[
+        p_{train}(x) \neq p_{test}(x), \quad \text{but} \quad p(y|x) \text{ unchanged}
+        \]
+    </div>
+    
+    <p>Other types of shift include:</p>
+    <ul>
+        <li><strong>Label shift</strong>: \(p_{train}(y) \neq p_{test}(y)\)</li>
+        <li><strong>Concept drift</strong>: \(p(y|x)\) changes over time</li>
+        <li><strong>Domain shift</strong>: Shift between different domains (e.g., photos vs. sketches)</li>
+    </ul>
+    
+    <h3>2.2 Standard Benchmarks</h3>
+    
+    <p>Common benchmarks for evaluating robustness to distribution shift:</p>
+    
+    <table>
+        <thead>
+            <tr>
+                <th>Benchmark</th>
+                <th>Description</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>ImageNet-C</td>
+                <td>ImageNet with 15 types of corruptions (noise, blur, weather, etc.)</td>
+            </tr>
+            <tr>
+                <td>ImageNet-R</td>
+                <td>Renditions of ImageNet classes (art, cartoons, sketches)</td>
+            </tr>
+            <tr>
+                <td>CIFAR-10-C</td>
+                <td>CIFAR-10 with corruptions</td>
+            </tr>
+            <tr>
+                <td>PACS</td>
+                <td>Photo, Art, Cartoon, Sketch domains</td>
+            </tr>
+        </tbody>
+    </table>
+    
+    <h3>2.3 Why Standard Training Fails</h3>
+    
+    <p>
+        A model trained on clean images has learned features optimized for that 
+        distribution. When presented with corrupted or shifted data, these features 
+        may become unreliable. For example:
+    </p>
+    <ul>
+        <li>Batch normalization statistics are calibrated for training distribution</li>
+        <li>Learned features may be spuriously correlated with training artifacts</li>
+        <li>Decision boundaries may not generalize to shifted inputs</li>
+    </ul>
+
+    <h2 id="original-ttt">3. Original Test-Time Training</h2>
+    
+    <p>
+        The original <strong>Test-Time Training (TTT)</strong> framework was introduced 
+        by Sun et al. (2020). The key idea is to adapt the model to each test sample 
+        using self-supervised learning before making a prediction.
+    </p>
+    
+    <h3>3.1 Framework</h3>
+    
+    <div class="highlight-box definition">
+        <div class="highlight-box-title">Definition: Test-Time Training</div>
+        <p>Given a test input \(x_{test}\), TTT performs:</p>
+        <ol style="margin-bottom: 0;">
+            <li><strong>Self-supervised update</strong>: Optimize model parameters using a 
+                self-supervised loss \(\mathcal{L}_{ss}(x_{test})\)</li>
+            <li><strong>Prediction</strong>: Use the updated model to predict \(\hat{y}\)</li>
+        </ol>
+    </div>
+    
+    <p>
+        The model is typically decomposed into a <strong>shared feature extractor</strong> 
+        \(f_\theta\) and two heads:
+    </p>
+    <ul>
+        <li><strong>Main task head</strong> \(g_\phi\): For the supervised prediction task</li>
+        <li><strong>Self-supervised head</strong> \(h_\psi\): For the auxiliary task (e.g., rotation prediction)</li>
+    </ul>
+    
+    <h3>3.2 Training Phase</h3>
+    
+    <p>During training, both tasks are optimized jointly:</p>
+    
+    \[
+    \mathcal{L}_{train} = \mathcal{L}_{main}(g_\phi(f_\theta(x)), y) + \lambda \mathcal{L}_{ss}(h_\psi(f_\theta(x)))
+    \]
+    
+    <p>
+        The self-supervised task must be chosen such that solving it helps the main 
+        task. Common choices include:
+    </p>
+    <ul>
+        <li>Rotation prediction (0°, 90°, 180°, 270°)</li>
+        <li>Contrastive learning</li>
+        <li>Masked autoencoding</li>
+    </ul>
+    
+    <h3>3.3 Test Phase</h3>
+    
+    <p>At test time, for each input \(x_{test}\):</p>
+    
+    <ol>
+        <li>Copy model parameters: \(\theta' \leftarrow \theta\)</li>
+        <li>Perform gradient descent on self-supervised loss:
+            \[\theta' \leftarrow \theta' - \eta \nabla_{\theta'} \mathcal{L}_{ss}(h_\psi(f_{\theta'}(x_{test})))\]
+        </li>
+        <li>Make prediction: \(\hat{y} = g_\phi(f_{\theta'}(x_{test}))\)</li>
+    </ol>
+    
+    <div class="highlight-box">
+        <div class="highlight-box-title">Why Does This Work?</div>
+        <p style="margin-bottom: 0;">
+            The self-supervised task provides a learning signal that doesn't require labels. 
+            By adapting the feature extractor to solve the self-supervised task on the 
+            specific test input, the model adjusts its representations to better capture 
+            the structure of the shifted distribution. If the self-supervised task is 
+            well-chosen, this adaptation also improves main task performance.
+        </p>
+    </div>
+
+    <h2 id="ttt-variants">4. TTT Variants and Extensions</h2>
+    
+    <h3>4.1 TTT with Masked Autoencoders (TTT-MAE)</h3>
+    
+    <p>
+        Gandelsman et al. (2022) proposed using <strong>Masked Autoencoders (MAE)</strong> 
+        as the self-supervised task for TTT. Given a test image, they:
+    </p>
+    <ol>
+        <li>Randomly mask patches of the input</li>
+        <li>Reconstruct the masked patches</li>
+        <li>Update the encoder based on reconstruction loss</li>
+    </ol>
+    
+    <p>
+        MAE provides a strong self-supervised signal because reconstruction requires 
+        understanding the global structure of the image.
+    </p>
+    
+    <h3>4.2 TENT: Test-Time Entropy Minimization</h3>
+    
+    <p>
+        TENT (Wang et al., 2021) adapts the model by minimizing the entropy of its 
+        predictions:
+    </p>
+    
+    \[
+    \mathcal{L}_{entropy} = -\sum_{c} p(c|x) \log p(c|x)
+    \]
+    
+    <p>
+        Only batch normalization parameters are updated, making it very efficient. 
+        However, it can be unstable for individual samples.
+    </p>
+    
+    <h3>4.3 Prediction-Time Batch Normalization</h3>
+    
+    <p>
+        A simpler approach updates only batch normalization statistics at test time 
+        using the test batch itself:
+    </p>
+    \[
+    \mu_{test} = \frac{1}{|B|}\sum_{x \in B} f(x), \quad \sigma^2_{test} = \frac{1}{|B|}\sum_{x \in B} (f(x) - \mu_{test})^2
+    \]
+    
+    <p>
+        This requires no gradient computation and can be surprisingly effective when 
+        test batches are available.
+    </p>
+    
+    <h3>4.4 Diffusion-TTA</h3>
+    
+    <p>
+        Prabhudesai et al. (2023) use pretrained diffusion models to provide feedback 
+        for test-time adaptation. The idea is that a diffusion model captures the 
+        data distribution, so maximizing the likelihood under this model adapts the 
+        discriminative model toward realistic inputs.
+    </p>
+
+    <h2 id="ttt-layers">5. TTT as Sequence Modeling Layers</h2>
+    
+    <p>
+        A breakthrough reinterpretation of TTT came from Sun et al. (2024), who 
+        proposed <strong>TTT layers</strong> as a new class of sequence modeling 
+        architecture. Instead of adapting a pretrained model to distribution shift, 
+        TTT layers incorporate learning as part of the forward pass itself.
+    </p>
+    
+    <h3>5.1 Motivation: The Expressiveness-Efficiency Trade-off</h3>
+    
+    <p>
+        Consider the two dominant paradigms for sequence modeling:
+    </p>
+    
+    <table>
+        <thead>
+            <tr>
+                <th>Approach</th>
+                <th>Complexity</th>
+                <th>Long Context</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Transformers (Self-Attention)</td>
+                <td>\(O(n^2)\)</td>
+                <td>Excellent</td>
+            </tr>
+            <tr>
+                <td>RNNs (Linear State)</td>
+                <td>\(O(n)\)</td>
+                <td>Poor</td>
+            </tr>
+        </tbody>
+    </table>
+    
+    <p>
+        The bottleneck for RNNs is the <strong>expressiveness of the hidden state</strong>. 
+        A fixed-size vector cannot compress arbitrarily long context without losing 
+        information. Transformers solve this by storing all tokens, but at quadratic cost.
+    </p>
+    
+    <h3>5.2 Key Insight: Hidden State as a Model</h3>
+    
+    <div class="highlight-box theorem">
+        <div class="highlight-box-title">TTT Layer Core Idea</div>
+        <p style="margin-bottom: 0;">
+            Make the hidden state a <strong>machine learning model</strong> \(W\), and 
+            the update rule a step of <strong>self-supervised learning</strong>. The 
+            hidden state grows in expressiveness as it "trains" on the sequence.
+        </p>
+    </div>
+    
+    <p>
+        Formally, for each token \(x_t\) in a sequence:
+    </p>
+    \[
+    W_t = W_{t-1} - \eta \nabla_W \ell(W_{t-1}; x_t)
+    \]
+    
+    <p>
+        where \(\ell\) is a self-supervised loss. The output at position \(t\) is then:
+    </p>
+    \[
+    y_t = f(x_t; W_t)
+    \]
+
+    <h2 id="ttt-linear">6. TTT-Linear: Linear Hidden States</h2>
+    
+    <p>
+        The simplest instantiation uses a <strong>linear model</strong> as the hidden 
+        state. This turns out to be surprisingly powerful and connects to attention 
+        mechanisms.
+    </p>
+    
+    <h3>6.1 Setup</h3>
+    
+    <p>
+        Let the hidden state be a linear model \(W \in \mathbb{R}^{d \times d}\). 
+        Given token embedding \(x_t\), we form:
+    </p>
+    <ul>
+        <li>Key: \(k_t = \theta_K x_t\)</li>
+        <li>Value: \(v_t = \theta_V x_t\)</li>
+        <li>Query: \(q_t = \theta_Q x_t\)</li>
+    </ul>
+    
+    <h3>6.2 Self-Supervised Objective</h3>
+    
+    <p>
+        The self-supervised task is to predict the value from the key using the 
+        linear model:
+    </p>
+    
+    \[
+    \ell(W; x_t) = \|W k_t - v_t\|^2
+    \]
+    
+    <p>
+        This is a reconstruction objective: given the key, predict the value.
+    </p>
+    
+    <h3>6.3 Gradient Update</h3>
+    
+    <p>Taking the gradient with respect to \(W\):</p>
+    
+    \[
+    \nabla_W \ell = 2(W k_t - v_t) k_t^T
+    \]
+    
+    <p>The update rule becomes:</p>
+    
+    \[
+    W_t = W_{t-1} - \eta (W_{t-1} k_t - v_t) k_t^T
+    \]
+    
+    <p>This can be rewritten in a more familiar form:</p>
+    
+    \[
+    W_t = W_{t-1} + \eta v_t k_t^T - \eta W_{t-1} k_t k_t^T
+    \]
+    
+    <h3>6.4 Connection to Linear Attention</h3>
+    
+    <div class="highlight-box theorem">
+        <div class="highlight-box-title">Theorem: TTT-Linear and Linear Attention</div>
+        <p>
+            When initialized with \(W_0 = 0\) and using learning rate \(\eta = 1\):
+        </p>
+        \[
+        W_t = \sum_{i=1}^{t} \alpha_i v_i k_i^T
+        \]
+        <p style="margin-bottom: 0;">
+            where \(\alpha_i\) depends on the key-key interactions. The output 
+            \(W_t q_t\) resembles linear attention but with learned weighting.
+        </p>
+    </div>
+    
+    <p>
+        This reveals that TTT-Linear is a generalization of linear attention with 
+        a learnable (rather than fixed) aggregation rule.
+    </p>
+
+    <h2 id="ttt-mlp">7. TTT-MLP: Nonlinear Hidden States</h2>
+    
+    <p>
+        To increase expressiveness beyond linear models, we can use a 
+        <strong>multi-layer perceptron (MLP)</strong> as the hidden state.
+    </p>
+    
+    <h3>7.1 Setup</h3>
+    
+    <p>
+        The hidden state is a two-layer MLP:
+    </p>
+    \[
+    W = (W_1, W_2) \quad \text{where} \quad f(k; W) = W_2 \sigma(W_1 k)
+    \]
+    
+    <p>The self-supervised loss remains:</p>
+    \[
+    \ell(W; x_t) = \|f(k_t; W) - v_t\|^2
+    \]
+    
+    <h3>7.2 Mini-Batch TTT</h3>
+    
+    <p>
+        For efficiency, TTT-MLP processes tokens in mini-batches. Rather than 
+        updating \(W\) after each token, updates are accumulated over a batch 
+        of \(b\) tokens:
+    </p>
+    
+    \[
+    W_{t+b} = W_t - \eta \sum_{i=t}^{t+b-1} \nabla_W \ell(W_t; x_i)
+    \]
+    
+    <p>
+        This trades off granularity for computational efficiency and parallelism.
+    </p>
+    
+    <h3>7.3 Expressiveness vs. Efficiency</h3>
+    
+    <table>
+        <thead>
+            <tr>
+                <th>Model</th>
+                <th>Hidden State</th>
+                <th>Expressiveness</th>
+                <th>Efficiency</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>TTT-Linear</td>
+                <td>Linear (\(d \times d\) matrix)</td>
+                <td>Moderate</td>
+                <td>High (closed-form update)</td>
+            </tr>
+            <tr>
+                <td>TTT-MLP</td>
+                <td>2-layer MLP</td>
+                <td>High</td>
+                <td>Lower (requires backprop)</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h2 id="comparison">8. Comparison with Transformers and RNNs</h2>
+    
+    <h3>8.1 Complexity Analysis</h3>
+    
+    <table>
+        <thead>
+            <tr>
+                <th>Model</th>
+                <th>Time</th>
+                <th>Space</th>
+                <th>Long Context</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Transformer</td>
+                <td>\(O(n^2 d)\)</td>
+                <td>\(O(n^2)\) or \(O(nd)\)</td>
+                <td>Excellent</td>
+            </tr>
+            <tr>
+                <td>Mamba (SSM)</td>
+                <td>\(O(nd)\)</td>
+                <td>\(O(d)\)</td>
+                <td>Limited</td>
+            </tr>
+            <tr>
+                <td>TTT-Linear</td>
+                <td>\(O(nd^2)\)</td>
+                <td>\(O(d^2)\)</td>
+                <td>Good</td>
+            </tr>
+            <tr>
+                <td>TTT-MLP</td>
+                <td>\(O(nd^2)\)</td>
+                <td>\(O(d^2)\)</td>
+                <td>Excellent</td>
+            </tr>
+        </tbody>
+    </table>
+    
+    <h3>8.2 Empirical Results</h3>
+    
+    <p>
+        From the TTT paper (Sun et al., 2024), comparing models at similar 
+        compute budgets on language modeling:
+    </p>
+    
+    <ul>
+        <li><strong>Short context (2K-4K)</strong>: All models perform similarly</li>
+        <li><strong>Medium context (8K-16K)</strong>: Mamba starts to plateau; TTT continues improving</li>
+        <li><strong>Long context (32K+)</strong>: Only Transformer and TTT-MLP continue improving</li>
+    </ul>
+    
+    <div class="highlight-box">
+        <div class="highlight-box-title">Key Finding</div>
+        <p style="margin-bottom: 0;">
+            TTT-MLP can match Transformer's ability to use long context while 
+            maintaining linear complexity. The hidden state's capacity grows 
+            as it "trains" on more tokens, unlike fixed-size RNN states.
+        </p>
+    </div>
+
+    <h2 id="applications">9. Applications</h2>
+    
+    <h3>9.1 Robustness to Distribution Shift</h3>
+    
+    <p>Original TTT applications for handling corrupted or shifted inputs:</p>
+    <ul>
+        <li>Image classification under corruption (ImageNet-C)</li>
+        <li>Domain adaptation without target labels</li>
+        <li>Online adaptation to streaming data</li>
+    </ul>
+    
+    <h3>9.2 Language Modeling</h3>
+    
+    <p>TTT layers for long-context language modeling:</p>
+    <ul>
+        <li>Efficient processing of long documents</li>
+        <li>Continual adaptation to user-specific context</li>
+        <li>Book-level generation with consistent style</li>
+    </ul>
+    
+    <h3>9.3 Self-Adaptive LLMs</h3>
+    
+    <p>
+        Transformer² (Sun et al., 2025) uses TTT ideas to create self-adaptive 
+        LLMs that adjust their behavior based on the input task:
+    </p>
+    <ul>
+        <li>Dispatch system identifies task properties</li>
+        <li>Expert vectors are dynamically mixed</li>
+        <li>Only singular components of weights are adjusted</li>
+    </ul>
+
+    <h2 id="connections">10. Connections to Other Paradigms</h2>
+    
+    <h3>10.1 Meta-Learning</h3>
+    
+    <p>
+        TTT is related to <strong>meta-learning</strong> (learning to learn). In 
+        MAML-style meta-learning, the model learns an initialization that can 
+        quickly adapt to new tasks. TTT can be seen as performing this adaptation 
+        at test time using self-supervision.
+    </p>
+    
+    <h3>10.2 In-Context Learning</h3>
+    
+    <p>
+        Transformers perform <strong>in-context learning</strong>: they can 
+        learn from examples in their context window without gradient updates. 
+        TTT layers make this explicit—the hidden state literally learns from 
+        the context via gradient descent.
+    </p>
+    
+    <h3>10.3 State Space Models</h3>
+    
+    <p>
+        TTT layers share the linear complexity of <strong>State Space Models (SSMs)</strong> 
+        like Mamba, but use a different mechanism for maintaining state. SSMs use 
+        fixed linear recurrence; TTT uses learned updates.
+    </p>
+    
+    <h3>10.4 Fast Weights</h3>
+    
+    <p>
+        The idea of using an outer loop to modify inner weights dates back to 
+        <strong>fast weights</strong> (Schmidhuber, 1992). TTT provides a modern 
+        instantiation using self-supervised learning.
+    </p>
+
+    <h2 id="references">11. References</h2>
+    
+    <ol>
+        <li>
+            Sun, Y., Wang, X., Liu, Z., Miller, J., Efros, A. A., & Hardt, M. (2020). 
+            <em>Test-Time Training with Self-Supervision for Generalization under Distribution Shifts.</em> ICML 2020.
+            <a href="https://arxiv.org/abs/1909.13231">[arXiv]</a>
+        </li>
+        <li>
+            Gandelsman, Y., Sun, Y., Chen, X., & Efros, A. A. (2022). 
+            <em>Test-Time Training with Masked Autoencoders.</em> NeurIPS 2022.
+            <a href="https://arxiv.org/abs/2209.07522">[arXiv]</a>
+        </li>
+        <li>
+            Wang, D., Shelhamer, E., Liu, S., Olshausen, B., & Darrell, T. (2021). 
+            <em>TENT: Fully Test-Time Adaptation by Entropy Minimization.</em> ICLR 2021.
+            <a href="https://arxiv.org/abs/2006.10726">[arXiv]</a>
+        </li>
+        <li>
+            Nado, Z., Padhy, S., Sculley, D., D'Amour, A., Lakshminarayanan, B., & Snoek, J. (2020). 
+            <em>Evaluating Prediction-Time Batch Normalization for Robustness under Covariate Shift.</em>
+            <a href="https://arxiv.org/abs/2006.10963">[arXiv]</a>
+        </li>
+        <li>
+            Prabhudesai, M., et al. (2023). 
+            <em>Diffusion-TTA: Test-time Adaptation of Discriminative Models via Generative Feedback.</em> NeurIPS 2023.
+            <a href="https://arxiv.org/abs/2311.16102">[arXiv]</a>
+        </li>
+        <li>
+            Sun, Y., Li, X., Dalal, K., Xu, J., Vikram, A., Zhang, G., Dubois, Y., Chen, X., Wang, X., Koyejo, S., Hashimoto, T., & Guestrin, C. (2024). 
+            <em>Learning to (Learn at Test Time): RNNs with Expressive Hidden States.</em>
+            <a href="https://arxiv.org/abs/2407.04620">[arXiv]</a>
+        </li>
+        <li>
+            Sun, Q., et al. (2025). 
+            <em>Transformer²: Self-adaptive LLMs.</em> ICLR 2025.
+            <a href="https://arxiv.org/abs/2501.06252">[arXiv]</a>
+        </li>
+        <li>
+            Schmidhuber, J. (1992). 
+            <em>Learning to Control Fast-Weight Memories: An Alternative to Dynamic Recurrent Networks.</em> Neural Computation.
+        </li>
+        <li>
+            Gu, A., & Dao, T. (2023). 
+            <em>Mamba: Linear-Time Sequence Modeling with Selective State Spaces.</em>
+            <a href="https://arxiv.org/abs/2312.00752">[arXiv]</a>
+        </li>
+        <li>
+            Finn, C., Abbeel, P., & Levine, S. (2017). 
+            <em>Model-Agnostic Meta-Learning for Fast Adaptation of Deep Networks.</em> ICML 2017.
+            <a href="https://arxiv.org/abs/1703.03400">[arXiv]</a>
+        </li>
+    </ol>
+
+    <footer>
+        <p>
+            <a href="../index.html">&larr; Back to homepage</a> &middot; 
+            Last updated: January 2026
+        </p>
+    </footer>
+</body>
+</html>
