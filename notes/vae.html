@@ -1,0 +1,1053 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Variational Autoencoders: A Theoretical Introduction - Fukang Wen</title>
+    <meta name="description" content="A comprehensive theoretical introduction to Variational Autoencoders and their variants.">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700;900&family=STIX+Two+Math&display=swap" rel="stylesheet">
+    
+    <!-- MathJax -->
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Lato', Georgia, serif;
+            font-size: 17px;
+            line-height: 1.8;
+            color: #333;
+            background-color: #fff;
+            max-width: 780px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+        
+        a {
+            color: #1772d0;
+            text-decoration: none;
+        }
+        
+        a:hover {
+            color: #f09228;
+        }
+        
+        .back-link {
+            display: inline-block;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        
+        h1 {
+            font-size: 32px;
+            font-weight: 900;
+            margin-bottom: 10px;
+            line-height: 1.3;
+        }
+        
+        .meta {
+            color: #666;
+            font-size: 15px;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        h2 {
+            font-size: 24px;
+            font-weight: 700;
+            margin-top: 40px;
+            margin-bottom: 15px;
+            color: #1772d0;
+        }
+        
+        h3 {
+            font-size: 20px;
+            font-weight: 700;
+            margin-top: 30px;
+            margin-bottom: 10px;
+        }
+        
+        p {
+            margin-bottom: 18px;
+            text-align: justify;
+        }
+        
+        .highlight-box {
+            background: #f8f9fa;
+            border-left: 4px solid #1772d0;
+            padding: 20px;
+            margin: 25px 0;
+            border-radius: 0 5px 5px 0;
+        }
+        
+        .highlight-box.definition {
+            border-left-color: #28a745;
+            background: #f0fff4;
+        }
+        
+        .highlight-box.theorem {
+            border-left-color: #dc3545;
+            background: #fff5f5;
+        }
+        
+        .highlight-box.example {
+            border-left-color: #ffc107;
+            background: #fffbf0;
+        }
+        
+        .highlight-box-title {
+            font-weight: 700;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        
+        code {
+            font-family: 'Consolas', 'Monaco', monospace;
+            background: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 14px;
+        }
+        
+        pre {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 20px;
+            border-radius: 5px;
+            overflow-x: auto;
+            margin: 20px 0;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        
+        pre code {
+            background: none;
+            padding: 0;
+            color: inherit;
+        }
+        
+        ul, ol {
+            margin: 15px 0 15px 30px;
+        }
+        
+        li {
+            margin-bottom: 8px;
+        }
+        
+        .figure {
+            text-align: center;
+            margin: 30px 0;
+        }
+        
+        .figure img {
+            max-width: 100%;
+            border-radius: 5px;
+        }
+        
+        .figure-caption {
+            font-size: 14px;
+            color: #666;
+            margin-top: 10px;
+            font-style: italic;
+        }
+        
+        .toc {
+            background: #f8f9fa;
+            padding: 20px 30px;
+            border-radius: 5px;
+            margin-bottom: 30px;
+        }
+        
+        .toc-title {
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+        
+        .toc ul {
+            margin: 0;
+            list-style: none;
+        }
+        
+        .toc li {
+            margin-bottom: 5px;
+        }
+        
+        .toc a {
+            color: #555;
+        }
+        
+        footer {
+            margin-top: 60px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+            font-size: 14px;
+            color: #999;
+            text-align: center;
+        }
+
+        .math-display {
+            overflow-x: auto;
+            margin: 20px 0;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 25px 0;
+            font-size: 15px;
+        }
+        
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        th {
+            background: #f8f9fa;
+            font-weight: 700;
+        }
+    </style>
+</head>
+<body>
+    <a href="../index.html" class="back-link">&larr; Back to homepage</a>
+    
+    <h1>Variational Autoencoders: A Theoretical Introduction</h1>
+    
+    <div class="meta">
+        <strong>Fukang Wen</strong> &middot; January 2026 &middot; 
+        <span>Tags: Generative Models, VAE, Variational Inference, Representation Learning</span>
+    </div>
+
+    <div class="toc">
+        <div class="toc-title">Table of Contents</div>
+        <ul>
+            <li><a href="#introduction">1. Introduction</a></li>
+            <li><a href="#probabilistic-framework">2. Probabilistic Framework</a></li>
+            <li><a href="#elbo">3. The Evidence Lower Bound</a></li>
+            <li><a href="#reparameterization">4. The Reparameterization Trick</a></li>
+            <li><a href="#beta-vae">5. Beta-VAE and Disentanglement</a></li>
+            <li><a href="#cvae">6. Conditional VAE</a></li>
+            <li><a href="#vq-vae">7. VQ-VAE: Discrete Latent Spaces</a></li>
+            <li><a href="#hierarchical">8. Hierarchical VAEs</a></li>
+            <li><a href="#vae-gan">9. VAE-GAN</a></li>
+            <li><a href="#connections">10. Connections to Other Models</a></li>
+            <li><a href="#references">11. References</a></li>
+        </ul>
+    </div>
+
+    <h2 id="introduction">1. Introduction</h2>
+    
+    <p>
+        <strong>Variational Autoencoders (VAEs)</strong>, introduced by Kingma and Welling (2014) 
+        and concurrently by Rezende et al. (2014), represent a fundamental approach to deep 
+        generative modeling. Unlike traditional autoencoders that learn deterministic encodings, 
+        VAEs learn a <em>probabilistic</em> latent space, enabling both powerful representation 
+        learning and principled generation of new samples.
+    </p>
+    
+    <p>
+        The key insight of VAEs is to frame generative modeling as a variational inference problem. 
+        We assume data is generated by first sampling a latent variable \(z\) from a prior distribution, 
+        then generating the observation \(x\) from a conditional distribution. Learning involves 
+        simultaneously fitting the generative model and an approximate inference network.
+    </p>
+    
+    <div class="highlight-box">
+        <div class="highlight-box-title">Key Insight</div>
+        <p style="margin-bottom: 0;">
+            VAEs unify two perspectives: (1) autoencoders with a regularized latent space, and 
+            (2) directed probabilistic graphical models with amortized variational inference. 
+            This dual interpretation makes them both practical and theoretically grounded.
+        </p>
+    </div>
+    
+    <p>
+        Why are VAEs important? They provide:
+    </p>
+    <ul>
+        <li><strong>Principled generative modeling</strong>: A theoretically grounded framework for learning data distributions</li>
+        <li><strong>Learned representations</strong>: Latent codes that capture meaningful data structure</li>
+        <li><strong>Scalability</strong>: Efficient training with stochastic gradient descent</li>
+        <li><strong>Flexibility</strong>: Easy to extend with different architectures, priors, and objectives</li>
+    </ul>
+
+    <h2 id="probabilistic-framework">2. Probabilistic Framework</h2>
+    
+    <p>
+        Consider a dataset \(\{x^{(i)}\}_{i=1}^N\) of i.i.d. samples from an unknown data distribution 
+        \(p^*(x)\). We assume a <strong>latent variable model</strong>: each observation \(x\) is 
+        generated from an unobserved latent variable \(z\):
+    </p>
+    
+    <div class="math-display">
+        \[
+        z \sim p(z), \quad x \sim p_\theta(x|z)
+        \]
+    </div>
+    
+    <p>
+        Here, \(p(z)\) is the <strong>prior</strong> over latent variables (typically the isotropic 
+        Gaussian \(\mathcal{N}(0, I)\)), and \(p_\theta(x|z)\) is the <strong>likelihood</strong> 
+        or <strong>decoder</strong>, parameterized by a neural network with parameters \(\theta\).
+    </p>
+    
+    <h3>2.1 The Intractability Problem</h3>
+    
+    <p>
+        Our goal is to learn \(\theta\) by maximizing the marginal log-likelihood:
+    </p>
+    
+    <div class="math-display">
+        \[
+        \log p_\theta(x) = \log \int p_\theta(x|z) p(z) \, dz
+        \]
+    </div>
+    
+    <p>
+        This integral is <strong>intractable</strong> for two reasons:
+    </p>
+    <ol>
+        <li>We cannot enumerate all possible \(z\) values (continuous, high-dimensional)</li>
+        <li>For most \(z\), the likelihood \(p_\theta(x|z)\) is nearly zero, making naive Monte Carlo estimation inefficient</li>
+    </ol>
+    
+    <p>
+        Similarly, the true posterior \(p_\theta(z|x) = p_\theta(x|z)p(z)/p_\theta(x)\) is 
+        intractable because it requires computing \(p_\theta(x)\).
+    </p>
+    
+    <h3>2.2 Amortized Variational Inference</h3>
+    
+    <p>
+        VAEs address intractability by introducing an <strong>inference network</strong> (or encoder) 
+        \(q_\phi(z|x)\) that approximates the true posterior. This is called <strong>amortized 
+        inference</strong> because a single network (with parameters \(\phi\)) is trained to 
+        perform inference for all data points, rather than optimizing separate variational 
+        parameters for each \(x\).
+    </p>
+    
+    <div class="highlight-box definition">
+        <div class="highlight-box-title">Definition: VAE Components</div>
+        <ul style="margin-bottom: 0;">
+            <li><strong>Encoder</strong> \(q_\phi(z|x)\): Maps data to approximate posterior distribution (recognition model)</li>
+            <li><strong>Decoder</strong> \(p_\theta(x|z)\): Maps latent codes to data distribution (generative model)</li>
+            <li><strong>Prior</strong> \(p(z)\): Distribution over latent space (typically \(\mathcal{N}(0, I)\))</li>
+        </ul>
+    </div>
+    
+    <p>
+        The encoder typically outputs the parameters of a Gaussian distribution:
+    </p>
+    <div class="math-display">
+        \[
+        q_\phi(z|x) = \mathcal{N}(z; \mu_\phi(x), \text{diag}(\sigma^2_\phi(x)))
+        \]
+    </div>
+    <p>
+        where \(\mu_\phi(x)\) and \(\sigma^2_\phi(x)\) are outputs of neural networks.
+    </p>
+
+    <h2 id="elbo">3. The Evidence Lower Bound</h2>
+    
+    <p>
+        The <strong>Evidence Lower Bound (ELBO)</strong> provides a tractable objective for 
+        training VAEs. We derive it starting from the log marginal likelihood.
+    </p>
+    
+    <h3>3.1 Derivation of ELBO</h3>
+    
+    <p>Starting with the log-likelihood:</p>
+    
+    <div class="math-display">
+        \[
+        \log p_\theta(x) = \log \int p_\theta(x, z) \, dz = \log \int p_\theta(x|z) p(z) \, dz
+        \]
+    </div>
+    
+    <p>
+        We introduce the approximate posterior \(q_\phi(z|x)\) by multiplying and dividing:
+    </p>
+    
+    <div class="math-display">
+        \[
+        \log p_\theta(x) = \log \int q_\phi(z|x) \frac{p_\theta(x|z) p(z)}{q_\phi(z|x)} \, dz
+        \]
+    </div>
+    
+    <p>Applying <strong>Jensen's inequality</strong> (since \(\log\) is concave):</p>
+    
+    <div class="math-display">
+        \[
+        \log p_\theta(x) \geq \int q_\phi(z|x) \log \frac{p_\theta(x|z) p(z)}{q_\phi(z|x)} \, dz
+        \]
+    </div>
+    
+    <p>Expanding the logarithm:</p>
+    
+    <div class="math-display">
+        \[
+        \log p_\theta(x) \geq \underbrace{\mathbb{E}_{q_\phi(z|x)}[\log p_\theta(x|z)]}_{\text{reconstruction term}} - \underbrace{D_{KL}(q_\phi(z|x) \| p(z))}_{\text{regularization term}}
+        \]
+    </div>
+    
+    <p>This lower bound is the <strong>ELBO</strong>.</p>
+    
+    <div class="highlight-box theorem">
+        <div class="highlight-box-title">Theorem: ELBO Decomposition</div>
+        <p>
+            The log-evidence can be decomposed exactly as:
+        </p>
+        \[
+        \log p_\theta(x) = \text{ELBO}(\theta, \phi; x) + D_{KL}(q_\phi(z|x) \| p_\theta(z|x))
+        \]
+        <p style="margin-bottom: 0;">
+            Since KL divergence is non-negative, ELBO \(\leq \log p_\theta(x)\). 
+            The bound is tight if and only if \(q_\phi(z|x) = p_\theta(z|x)\), i.e., 
+            when the approximate posterior equals the true posterior.
+        </p>
+    </div>
+    
+    <h3>3.2 Interpretation of ELBO Terms</h3>
+    
+    <p>The ELBO has two intuitive terms with complementary roles:</p>
+    
+    <ol>
+        <li>
+            <strong>Reconstruction Term</strong>: \(\mathbb{E}_{q_\phi(z|x)}[\log p_\theta(x|z)]\)
+            <p>
+                Measures how well the decoder can reconstruct \(x\) from latent samples drawn from 
+                the encoder. Maximizing this term encourages the encoder to preserve information 
+                about \(x\) in \(z\), and the decoder to accurately reconstruct \(x\) from \(z\).
+            </p>
+        </li>
+        <li>
+            <strong>Regularization Term</strong>: \(-D_{KL}(q_\phi(z|x) \| p(z))\)
+            <p>
+                Encourages the approximate posterior \(q_\phi(z|x)\) to stay close to the prior \(p(z)\). 
+                This regularization ensures the latent space has the structure needed for generation: 
+                we can sample \(z \sim p(z)\) and decode it to generate new data.
+            </p>
+        </li>
+    </ol>
+    
+    <div class="highlight-box">
+        <div class="highlight-box-title">The Reconstruction-Regularization Trade-off</div>
+        <p style="margin-bottom: 0;">
+            These two terms are in tension: perfect reconstruction might require posteriors that 
+            deviate significantly from the prior, while perfect regularization (matching the prior 
+            exactly) would mean the latent code carries no information about the input. 
+            The ELBO balances these competing objectives.
+        </p>
+    </div>
+    
+    <h3>3.3 Closed-Form KL for Gaussians</h3>
+    
+    <p>
+        When the posterior is Gaussian \(q_\phi(z|x) = \mathcal{N}(\mu, \text{diag}(\sigma^2))\) 
+        and the prior is standard Gaussian \(p(z) = \mathcal{N}(0, I)\), the KL divergence has 
+        a closed-form solution:
+    </p>
+    
+    <div class="math-display">
+        \[
+        D_{KL}(q_\phi(z|x) \| p(z)) = \frac{1}{2} \sum_{j=1}^{d} \left( \mu_j^2 + \sigma_j^2 - \log \sigma_j^2 - 1 \right)
+        \]
+    </div>
+    
+    <p>
+        where \(d\) is the latent dimension. This can be computed analytically without sampling.
+    </p>
+
+    <h2 id="reparameterization">4. The Reparameterization Trick</h2>
+    
+    <p>
+        A key challenge in training VAEs is computing gradients of the reconstruction term 
+        \(\mathbb{E}_{q_\phi(z|x)}[\log p_\theta(x|z)]\) with respect to encoder parameters \(\phi\). 
+        The expectation involves sampling \(z \sim q_\phi(z|x)\), which is a stochastic operation 
+        that blocks gradient flow.
+    </p>
+    
+    <h3>4.1 The Problem with Direct Sampling</h3>
+    
+    <p>
+        If we sample \(z\) directly from \(q_\phi(z|x)\), we cannot compute \(\nabla_\phi\) because 
+        the sampling operation is not differentiable. The gradient \(\nabla_\phi z\) is undefined 
+        when \(z\) is obtained by sampling from a distribution parameterized by \(\phi\).
+    </p>
+    
+    <h3>4.2 The Reparameterization Solution</h3>
+    
+    <p>
+        The <strong>reparameterization trick</strong> expresses the sample as a deterministic 
+        function of the parameters and an auxiliary noise variable:
+    </p>
+    
+    <div class="math-display">
+        \[
+        z = g_\phi(\epsilon, x) = \mu_\phi(x) + \sigma_\phi(x) \odot \epsilon, \quad \epsilon \sim \mathcal{N}(0, I)
+        \]
+    </div>
+    
+    <p>
+        Now the randomness is "externalized" to \(\epsilon\), which does not depend on \(\phi\). 
+        The function \(g_\phi\) is differentiable with respect to \(\phi\), enabling standard 
+        backpropagation:
+    </p>
+    
+    <div class="math-display">
+        \[
+        \nabla_\phi \mathbb{E}_{q_\phi(z|x)}[f(z)] = \mathbb{E}_{\epsilon \sim \mathcal{N}(0,I)}[\nabla_\phi f(g_\phi(\epsilon, x))]
+        \]
+    </div>
+    
+    <p>
+        In practice, we estimate this expectation with a single sample of \(\epsilon\) per data point.
+    </p>
+    
+    <div class="highlight-box">
+        <div class="highlight-box-title">Why Not REINFORCE?</div>
+        <p>
+            An alternative is the <strong>REINFORCE</strong> (score function) gradient estimator:
+        </p>
+        \[
+        \nabla_\phi \mathbb{E}_{q_\phi}[f(z)] = \mathbb{E}_{q_\phi}[f(z) \nabla_\phi \log q_\phi(z|x)]
+        \]
+        <p style="margin-bottom: 0;">
+            This applies to any distribution but has <strong>high variance</strong>, requiring 
+            many samples or complex variance reduction techniques (baselines, control variates). 
+            The reparameterization trick provides low-variance gradients with just one sample, 
+            making training dramatically more efficient.
+        </p>
+    </div>
+    
+    <h3>4.3 Applicability</h3>
+    
+    <p>
+        The reparameterization trick requires that we can express samples from \(q_\phi(z|x)\) 
+        as a differentiable transformation of noise. This works for:
+    </p>
+    <ul>
+        <li>Gaussians (as shown above)</li>
+        <li>Any location-scale family</li>
+        <li>Distributions with differentiable inverse CDF</li>
+    </ul>
+    <p>
+        It does <em>not</em> directly apply to discrete distributions, which motivated techniques 
+        like the Gumbel-Softmax (for categorical) and VQ-VAE (for codebook learning).
+    </p>
+
+    <h2 id="beta-vae">5. Beta-VAE and Disentanglement</h2>
+    
+    <p>
+        <strong>Beta-VAE</strong> (Higgins et al., 2017) modifies the VAE objective by introducing 
+        a hyperparameter \(\beta > 1\) that increases the weight of the KL term:
+    </p>
+    
+    <div class="math-display">
+        \[
+        \mathcal{L}_\beta = \mathbb{E}_{q_\phi(z|x)}[\log p_\theta(x|z)] - \beta \cdot D_{KL}(q_\phi(z|x) \| p(z))
+        \]
+    </div>
+    
+    <p>
+        When \(\beta = 1\), we recover the standard VAE. When \(\beta > 1\), we impose 
+        <em>stronger regularization</em> on the latent space.
+    </p>
+    
+    <h3>5.1 Information Bottleneck Perspective</h3>
+    
+    <p>
+        The KL term \(D_{KL}(q_\phi(z|x) \| p(z))\) upper-bounds the mutual information 
+        \(I(x; z)\) between data and latent codes. With \(\beta > 1\), we create a tighter 
+        <strong>information bottleneck</strong>: less information about \(x\) can pass through \(z\).
+    </p>
+    
+    <p>
+        This forces the model to prioritize: it must preserve the most essential information 
+        for reconstruction while discarding irrelevant details. The hypothesis is that 
+        essential information corresponds to the true generative factors.
+    </p>
+    
+    <h3>5.2 Disentanglement</h3>
+    
+    <p>
+        A <strong>disentangled representation</strong> is one where each latent dimension 
+        corresponds to an independent factor of variation in the data. For example, in face 
+        images, separate dimensions might control:
+    </p>
+    <ul>
+        <li>Pose (viewing angle)</li>
+        <li>Lighting direction</li>
+        <li>Expression (smile, frown)</li>
+        <li>Identity features</li>
+    </ul>
+    
+    <p>
+        The intuition for why \(\beta > 1\) promotes disentanglement:
+    </p>
+    
+    <ol>
+        <li>The factorial prior \(p(z) = \prod_j p(z_j)\) has independent dimensions</li>
+        <li>Stronger KL penalty forces \(q_\phi(z|x)\) toward this factorial structure</li>
+        <li>The information bottleneck forces the model to use capacity efficiently</li>
+        <li>Axis-aligned, interpretable representations emerge as the most efficient encoding</li>
+    </ol>
+    
+    <h3>5.3 The Reconstruction-Disentanglement Trade-off</h3>
+    
+    <p>
+        Increasing \(\beta\) improves disentanglement but hurts reconstruction quality. 
+        With very large \(\beta\), the model may collapse to the prior and ignore the input entirely.
+    </p>
+    
+    <div class="highlight-box example">
+        <div class="highlight-box-title">Practical Guidance</div>
+        <ul style="margin-bottom: 0;">
+            <li>\(\beta = 1\): Standard VAE, best reconstruction</li>
+            <li>\(\beta \in [2, 10]\): Good balance for disentanglement experiments</li>
+            <li>\(\beta > 10\): Strong disentanglement, but often blurry reconstructions</li>
+        </ul>
+    </div>
+
+    <h2 id="cvae">6. Conditional VAE</h2>
+    
+    <p>
+        <strong>Conditional VAE (CVAE)</strong> (Sohn et al., 2015) extends VAE to model conditional 
+        distributions \(p(x|c)\), where \(c\) is some conditioning information such as a class label, 
+        text description, or partial observation.
+    </p>
+    
+    <h3>6.1 Generative Model</h3>
+    
+    <p>The conditional generative process is:</p>
+    
+    <div class="math-display">
+        \[
+        z \sim p(z|c), \quad x \sim p_\theta(x|z, c)
+        \]
+    </div>
+    
+    <p>The marginal becomes:</p>
+    
+    <div class="math-display">
+        \[
+        p_\theta(x|c) = \int p_\theta(x|z, c) \, p(z|c) \, dz
+        \]
+    </div>
+    
+    <h3>6.2 Conditional ELBO</h3>
+    
+    <p>
+        With an inference network \(q_\phi(z|x,c)\) that takes both \(x\) and \(c\) as input, 
+        the ELBO becomes:
+    </p>
+    
+    <div class="math-display">
+        \[
+        \mathcal{L}(\theta, \phi; x, c) = \mathbb{E}_{q_\phi(z|x,c)}[\log p_\theta(x|z,c)] - D_{KL}(q_\phi(z|x,c) \| p(z|c))
+        \]
+    </div>
+    
+    <h3>6.3 Prior Choice</h3>
+    
+    <p>Two common choices for the conditional prior \(p(z|c)\):</p>
+    
+    <ol>
+        <li>
+            <strong>Condition-independent prior</strong>: \(p(z|c) = p(z) = \mathcal{N}(0, I)\)
+            <p>Simple but may not capture condition-specific structure.</p>
+        </li>
+        <li>
+            <strong>Learned conditional prior</strong>: \(p_\psi(z|c) = \mathcal{N}(\mu_\psi(c), \sigma^2_\psi(c))\)
+            <p>More expressive; the prior adapts to each condition.</p>
+        </li>
+    </ol>
+    
+    <h3>6.4 Conditioning Mechanisms</h3>
+    
+    <p>Several architectural approaches for incorporating condition \(c\):</p>
+    
+    <ul>
+        <li><strong>Concatenation</strong>: Append \(c\) (or its embedding) to encoder/decoder inputs. Simple and effective.</li>
+        <li><strong>Adaptive normalization</strong> (e.g., FiLM, AdaIN): Use \(c\) to modulate normalization layer parameters.</li>
+        <li><strong>Cross-attention</strong>: Attend to condition embeddings. Common for sequence or text conditioning.</li>
+    </ul>
+
+    <h2 id="vq-vae">7. VQ-VAE: Discrete Latent Spaces</h2>
+    
+    <p>
+        <strong>Vector Quantized VAE (VQ-VAE)</strong> (van den Oord et al., 2017) replaces the 
+        continuous Gaussian latent space with a <strong>discrete codebook</strong>. This enables 
+        modeling with powerful autoregressive priors and avoids the posterior collapse problem.
+    </p>
+    
+    <h3>7.1 The Codebook</h3>
+    
+    <p>
+        VQ-VAE maintains a codebook (embedding dictionary) \(E = \{e_1, \ldots, e_K\} \subset \mathbb{R}^d\) 
+        of \(K\) embedding vectors. The encoder outputs a continuous representation \(z_e(x)\), 
+        which is then <em>quantized</em> by finding the nearest codebook entry:
+    </p>
+    
+    <div class="math-display">
+        \[
+        z_q(x) = e_k, \quad \text{where } k = \arg\min_j \|z_e(x) - e_j\|_2
+        \]
+    </div>
+    
+    <p>
+        The decoder receives \(z_q\) rather than \(z_e\). This discrete bottleneck forces the 
+        model to learn a compact, structured representation.
+    </p>
+    
+    <h3>7.2 Straight-Through Estimator</h3>
+    
+    <p>
+        The \(\arg\min\) operation is non-differentiable. VQ-VAE uses the <strong>straight-through 
+        estimator</strong>: in the forward pass, we use the quantized \(z_q\); in the backward pass, 
+        gradients flow directly to \(z_e\) as if \(z_q = z_e\).
+    </p>
+    
+    <p>This can be implemented as:</p>
+    
+    <div class="math-display">
+        \[
+        z_q = z_e + \text{sg}(z_q - z_e)
+        \]
+    </div>
+    
+    <p>
+        where \(\text{sg}(\cdot)\) denotes stop-gradient (identity in forward, zero gradient in backward).
+    </p>
+    
+    <h3>7.3 Loss Function</h3>
+    
+    <p>The VQ-VAE loss has three components:</p>
+    
+    <div class="math-display">
+        \[
+        \mathcal{L} = \underbrace{-\log p(x|z_q)}_{\text{reconstruction}} + 
+        \underbrace{\|\text{sg}(z_e) - z_q\|_2^2}_{\text{codebook loss}} + 
+        \underbrace{\beta \|z_e - \text{sg}(z_q)\|_2^2}_{\text{commitment loss}}
+        \]
+    </div>
+    
+    <ul>
+        <li><strong>Reconstruction</strong>: Negative log-likelihood of data given quantized latents</li>
+        <li><strong>Codebook loss</strong>: Moves codebook entries toward encoder outputs (only updates \(E\))</li>
+        <li><strong>Commitment loss</strong>: Encourages encoder to commit to codebook entries (only updates encoder)</li>
+    </ul>
+    
+    <p>
+        Alternatively, codebook entries can be updated using <strong>exponential moving average (EMA)</strong> 
+        of encoder outputs, which often works better in practice.
+    </p>
+    
+    <h3>7.4 Advantages of Discrete Latents</h3>
+    
+    <ul>
+        <li><strong>No posterior collapse</strong>: No KL term that can be minimized to zero</li>
+        <li><strong>Powerful priors</strong>: Can model with autoregressive transformers over discrete codes</li>
+        <li><strong>Natural for discrete data</strong>: Good interface for text, symbolic data, discrete actions</li>
+        <li><strong>Compression</strong>: Discrete codes can be directly stored/transmitted</li>
+    </ul>
+    
+    <div class="highlight-box">
+        <div class="highlight-box-title">Codebook Collapse</div>
+        <p style="margin-bottom: 0;">
+            A common failure mode is <strong>codebook collapse</strong>: only a few codebook entries 
+            are used while others remain "dead." Solutions include: EMA updates, codebook reset 
+            (reinitialize dead entries), and auxiliary diversity losses.
+        </p>
+    </div>
+
+    <h2 id="hierarchical">8. Hierarchical VAEs</h2>
+    
+    <p>
+        <strong>Hierarchical VAEs</strong> use multiple levels of latent variables to capture 
+        structure at different scales. This enables modeling of complex, multi-scale data 
+        distributions and has led to state-of-the-art image generation results.
+    </p>
+    
+    <h3>8.1 Motivation</h3>
+    
+    <p>
+        Standard VAEs use a single latent layer, which limits their expressiveness. Complex 
+        data often has hierarchical structure: images have global composition (layout, objects) 
+        and local details (textures, edges). A hierarchical latent space can naturally capture 
+        these different levels of abstraction.
+    </p>
+    
+    <h3>8.2 Generative Model</h3>
+    
+    <p>
+        Let \(z = (z_1, \ldots, z_L)\) be a hierarchy where \(z_L\) is the "top" (most abstract) 
+        level and \(z_1\) is closest to the data. The joint distribution factorizes top-down:
+    </p>
+    
+    <div class="math-display">
+        \[
+        p_\theta(x, z_{1:L}) = p(z_L) \prod_{l=1}^{L-1} p_\theta(z_l | z_{l+1:L}) \cdot p_\theta(x | z_{1:L})
+        \]
+    </div>
+    
+    <p>
+        Higher levels capture global, semantic information (e.g., object identity, scene layout); 
+        lower levels capture local details (e.g., textures, precise edges).
+    </p>
+    
+    <h3>8.3 Inference Model</h3>
+    
+    <p>The approximate posterior typically factorizes bottom-up:</p>
+    
+    <div class="math-display">
+        \[
+        q_\phi(z_{1:L} | x) = \prod_{l=1}^{L} q_\phi(z_l | z_{1:l-1}, x)
+        \]
+    </div>
+    
+    <h3>8.4 The Posterior Collapse Problem</h3>
+    
+    <p>
+        A major challenge in hierarchical VAEs is <strong>posterior collapse</strong>: upper 
+        latent layers may be ignored if lower layers are sufficiently expressive. The model 
+        learns to route all information through \(z_1\), and higher layers collapse to the prior.
+    </p>
+    
+    <p>Solutions that have proven effective:</p>
+    
+    <ul>
+        <li>
+            <strong>Top-down inference</strong>: Let the inference network also receive top-down 
+            information, so higher layers can influence lower layer posteriors
+        </li>
+        <li>
+            <strong>Residual parameterization</strong>: Parameterize each level's prior as a 
+            residual from the higher level, ensuring each level must contribute
+        </li>
+        <li>
+            <strong>KL annealing</strong>: Gradually increase KL weight during training
+        </li>
+        <li>
+            <strong>Free bits</strong>: Allow a minimum KL per dimension before penalizing, 
+            ensuring each dimension carries some information
+        </li>
+        <li>
+            <strong>Architectural constraints</strong>: Limit the capacity of lower levels 
+            so they cannot capture everything alone
+        </li>
+    </ul>
+    
+    <h3>8.5 Notable Examples</h3>
+    
+    <table>
+        <thead>
+            <tr>
+                <th>Model</th>
+                <th>Key Innovation</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr><td>Ladder VAE</td><td>Top-down connections in inference network; merges bottom-up and top-down information</td></tr>
+            <tr><td>NVAE</td><td>Deep hierarchical VAE (30+ levels) with depthwise separable convolutions and batch norm</td></tr>
+            <tr><td>Very Deep VAE</td><td>Simplified NVAE architecture; showed hierarchical VAEs can match GANs in image quality</td></tr>
+            <tr><td>VQ-VAE-2</td><td>Hierarchical VQ-VAE with multi-scale discrete latents for high-resolution synthesis</td></tr>
+        </tbody>
+    </table>
+
+    <h2 id="vae-gan">9. VAE-GAN</h2>
+    
+    <p>
+        VAE-generated images tend to be <strong>blurry</strong>. This is because pixel-wise 
+        reconstruction losses (MSE, BCE) penalize any deviation from the target equally, 
+        regardless of whether it's perceptually important. The optimal solution under MSE 
+        is the <em>mean</em> of possible outputs, which is blurry when there's uncertainty.
+    </p>
+    
+    <h3>9.1 Why VAEs Produce Blurry Images</h3>
+    
+    <p>
+        Consider reconstructing a face: there are many valid reconstructions that differ in 
+        fine details (exact hair strand positions, skin texture). Under MSE loss, the optimal 
+        decoder output is the average of all these possibilities&mdash;a blurry image.
+    </p>
+    
+    <h3>9.2 Feature-Space Reconstruction</h3>
+    
+    <p>
+        <strong>VAE-GAN</strong> (Larsen et al., 2016) addresses this by replacing pixel-wise 
+        reconstruction with <strong>feature matching loss</strong>. Instead of comparing pixels, 
+        we compare features extracted by a discriminator network \(D\):
+    </p>
+    
+    <div class="math-display">
+        \[
+        \mathcal{L}_{\text{feature}} = \|f_D(x) - f_D(\hat{x})\|_2^2
+        \]
+    </div>
+    
+    <p>
+        where \(f_D\) extracts intermediate layer activations from the discriminator. 
+        This loss is more perceptually meaningful: images that look similar to humans 
+        also have similar discriminator features.
+    </p>
+    
+    <h3>9.3 Combined Objective</h3>
+    
+    <p>VAE-GAN training involves three networks with interleaved updates:</p>
+    
+    <ul>
+        <li><strong>Encoder</strong>: Minimizes feature reconstruction loss + KL divergence</li>
+        <li><strong>Decoder/Generator</strong>: Minimizes feature reconstruction + adversarial loss (fool discriminator)</li>
+        <li><strong>Discriminator</strong>: Maximizes ability to distinguish real from reconstructed/generated images</li>
+    </ul>
+    
+    <div class="math-display">
+        \[
+        \mathcal{L}_{\text{VAE-GAN}} = \mathcal{L}_{\text{feature}} + \beta \cdot D_{KL}(q_\phi(z|x) \| p(z)) + \lambda \cdot \mathcal{L}_{\text{GAN}}
+        \]
+    </div>
+    
+    <p>
+        The discriminator must distinguish between three types of images: real images, 
+        reconstructed images (from encoding real data), and samples (from the prior).
+    </p>
+    
+    <div class="highlight-box">
+        <div class="highlight-box-title">Training Considerations</div>
+        <p style="margin-bottom: 0;">
+            VAE-GAN training can be unstable due to the adversarial component. Practical tips: 
+            use separate learning rates for different networks, employ spectral normalization 
+            in the discriminator, consider two-timescale update rules, and monitor for mode 
+            collapse or discriminator overfitting.
+        </p>
+    </div>
+
+    <h2 id="connections">10. Connections to Other Models</h2>
+    
+    <h3>10.1 VAE and Deterministic Autoencoders</h3>
+    
+    <p>
+        Without the KL regularization term (or as \(\sigma \to 0\)), a VAE becomes a 
+        <strong>deterministic autoencoder</strong>. The latent space may then have "holes"&mdash;
+        regions where no training data maps&mdash;making sampling unreliable. The KL term 
+        ensures the latent space is "filled in" and suitable for generation.
+    </p>
+    
+    <h3>10.2 VAE and Normalizing Flows</h3>
+    
+    <p>
+        The Gaussian posterior \(q_\phi(z|x)\) is often too simple to match complex true posteriors. 
+        <strong>Normalizing flows</strong> can enhance VAEs by transforming a simple base distribution 
+        through a sequence of invertible mappings:
+    </p>
+    
+    <div class="math-display">
+        \[
+        z_K = f_K \circ \cdots \circ f_1(z_0), \quad z_0 \sim q_0(z_0|x)
+        \]
+    </div>
+    
+    <p>
+        This gives a more expressive posterior while maintaining tractable density evaluation.
+    </p>
+    
+    <h3>10.3 VAE and Diffusion Models</h3>
+    
+    <p>
+        <strong>Diffusion models</strong> can be viewed as hierarchical VAEs with special structure:
+    </p>
+    <ul>
+        <li>Infinitely many latent levels (continuous time)</li>
+        <li>Fixed (non-learned) forward process</li>
+        <li>Markovian structure in both forward and reverse processes</li>
+    </ul>
+    
+    <p>
+        Both VAEs and diffusion models optimize variational bounds on the log-likelihood, 
+        revealing their deep connection.
+    </p>
+    
+    <h3>10.4 VAE and Energy-Based Models</h3>
+    
+    <p>
+        VAEs with expressive priors (e.g., energy-based priors) connect to energy-based models. 
+        The prior \(p(z) \propto \exp(-E(z))\) defines an energy landscape in latent space. 
+        This enables modeling of more complex latent structure but requires MCMC sampling during training.
+    </p>
+
+    <h2 id="references">11. References</h2>
+    
+    <ol>
+        <li>
+            Kingma, D. P., & Welling, M. (2014). 
+            <em>Auto-Encoding Variational Bayes.</em> ICLR 2014.
+            <a href="https://arxiv.org/abs/1312.6114">[arXiv]</a>
+        </li>
+        <li>
+            Rezende, D. J., Mohamed, S., & Wierstra, D. (2014). 
+            <em>Stochastic Backpropagation and Approximate Inference in Deep Generative Models.</em> ICML 2014.
+            <a href="https://arxiv.org/abs/1401.4082">[arXiv]</a>
+        </li>
+        <li>
+            Higgins, I., et al. (2017). 
+            <em>beta-VAE: Learning Basic Visual Concepts with a Constrained Variational Framework.</em> ICLR 2017.
+            <a href="https://openreview.net/forum?id=Sy2fzU9gl">[OpenReview]</a>
+        </li>
+        <li>
+            Sohn, K., Lee, H., & Yan, X. (2015). 
+            <em>Learning Structured Output Representation using Deep Conditional Generative Models.</em> NeurIPS 2015.
+            <a href="https://proceedings.neurips.cc/paper/2015/hash/8d55a249e6baa5c06772297520da2051-Abstract.html">[NeurIPS]</a>
+        </li>
+        <li>
+            van den Oord, A., Vinyals, O., & Kavukcuoglu, K. (2017). 
+            <em>Neural Discrete Representation Learning.</em> NeurIPS 2017.
+            <a href="https://arxiv.org/abs/1711.00937">[arXiv]</a>
+        </li>
+        <li>
+            Vahdat, A., & Kautz, J. (2020). 
+            <em>NVAE: A Deep Hierarchical Variational Autoencoder.</em> NeurIPS 2020.
+            <a href="https://arxiv.org/abs/2007.03898">[arXiv]</a>
+        </li>
+        <li>
+            Larsen, A. B. L., Sønderby, S. K., Larochelle, H., & Winther, O. (2016). 
+            <em>Autoencoding beyond pixels using a learned similarity metric.</em> ICML 2016.
+            <a href="https://arxiv.org/abs/1512.09300">[arXiv]</a>
+        </li>
+        <li>
+            Sønderby, C. K., Raiko, T., Maaløe, L., Sønderby, S. K., & Winther, O. (2016). 
+            <em>Ladder Variational Autoencoders.</em> NeurIPS 2016.
+            <a href="https://arxiv.org/abs/1602.02282">[arXiv]</a>
+        </li>
+        <li>
+            Child, R. (2021). 
+            <em>Very Deep VAEs Generalize Autoregressive Models and Can Outperform Them on Images.</em> ICLR 2021.
+            <a href="https://arxiv.org/abs/2011.10650">[arXiv]</a>
+        </li>
+        <li>
+            Razavi, A., van den Oord, A., & Vinyals, O. (2019). 
+            <em>Generating Diverse High-Fidelity Images with VQ-VAE-2.</em> NeurIPS 2019.
+            <a href="https://arxiv.org/abs/1906.00446">[arXiv]</a>
+        </li>
+    </ol>
+
+    <footer>
+        <p>
+            <a href="../index.html">&larr; Back to homepage</a> &middot; 
+            Last updated: January 2026
+        </p>
+    </footer>
+</body>
+</html>

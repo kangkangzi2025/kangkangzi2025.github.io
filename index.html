@@ -69,20 +69,6 @@
             flex-shrink: 0;
         }
         
-        .profile-photo-placeholder {
-            width: 200px;
-            height: 200px;
-            border-radius: 10px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 48px;
-            font-weight: bold;
-            flex-shrink: 0;
-        }
-        
         .bio {
             flex: 1;
         }
@@ -231,12 +217,20 @@
 <body>
     <!-- Header -->
     <div class="header">
-        <div class="profile-photo-placeholder">FW</div>
+        <img src="avatar.png" alt="Fukang Wen" class="profile-photo">
         <div class="bio">
             <h1>Fukang Wen</h1>
             <p>
-                I am a Master student at <a href="https://www.tsinghua.edu.cn/en/">Tsinghua University</a>, 
-                affiliated with <a href="https://www.qiuzhen.tsinghua.edu.cn/">Qiuzhen College</a>.
+                I am a Master's student at <a href="https://www.tsinghua.edu.cn/en/">Tsinghua University</a>, 
+                affiliated with <a href="https://qzc.tsinghua.edu.cn/">Qiuzhen College</a>. 
+                I obtained my Bachelor's degree from <a href="https://www.sysu.edu.cn/">Sun Yat-sen University</a>, 
+                Department of Computer Science, along with a dual degree in Mathematics and Applied Mathematics 
+                from the Department of Mathematics.
+            </p>
+            <p>
+                Currently, I am supervised by <a href="https://shizqi.github.io/">Prof. Zuoqiang Shi</a> 
+                at Qiuzhen College. I also closely collaborate with 
+                <a href="https://www.bimsa.cn/detail/pipihu.html">Prof. Pipi Hu</a>, Associate Researcher at BIMSA.
             </p>
             <p>
                 My research interests lie in <strong>Large Language Model Reasoning</strong>, 
@@ -245,7 +239,7 @@
                 building AI systems that can reason, discover, and assist scientific research.
             </p>
             <div class="links">
-                <a href="mailto:wenfk@example.com">Email</a>
+                <a href="mailto:wfk25@tsinghua.edu.cn">Email</a>
                 <a href="https://github.com/kangkangzi2025">GitHub</a>
                 <a href="https://scholar.google.com/">Google Scholar</a>
                 <a href="#notes">Notes</a>
@@ -270,13 +264,13 @@
 
     <div class="entry">
         <div class="entry-image">
-            <div class="entry-image-placeholder">
-                Flow Matching
+            <div class="entry-image-placeholder" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                VAE
             </div>
         </div>
         <div class="entry-content">
             <div class="entry-title">
-                <a href="notes/flow-matching.html">Flow Matching: A Modern Approach to Generative Modeling</a>
+                <a href="notes/vae.html">Variational Autoencoders: A Theoretical Introduction</a>
             </div>
             <div class="entry-authors">
                 Fukang Wen
@@ -285,15 +279,15 @@
                 Technical Note, January 2026
             </div>
             <div class="entry-description">
-                A comprehensive introduction to Flow Matching, a powerful framework for training 
-                continuous normalizing flows. We cover the mathematical foundations, conditional 
-                flow matching, optimal transport paths, and practical implementation details.
+                A comprehensive theoretical introduction to Variational Autoencoders. Covers the 
+                probabilistic framework, ELBO derivation, reparameterization trick, and variants 
+                including Beta-VAE, CVAE, VQ-VAE, hierarchical VAEs, and VAE-GAN.
             </div>
             <div class="entry-links">
                 <span class="tag">Generative Models</span>
-                <span class="tag">Flow Matching</span>
-                <span class="tag">ODE</span>
-                <a href="notes/flow-matching.html">Read Note</a>
+                <span class="tag">VAE</span>
+                <span class="tag">Variational Inference</span>
+                <a href="notes/vae.html">Read Note</a>
             </div>
         </div>
     </div>
