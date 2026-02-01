@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Nested Learning: A Theoretical Introduction - Fukang Wen</title>
-    <meta name="description" content="A theoretical introduction to Google's Nested Learning framework from NeurIPS 2025.">
+    <meta name="description" content="A comprehensive theoretical introduction to Google's Nested Learning framework from NeurIPS 2025, covering bilevel optimization, implicit differentiation, and self-modifying networks.">
     
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -53,7 +53,7 @@
     <h1>Nested Learning: ML as Optimization over Optimization</h1>
     <div class="meta">
         <strong>Fukang Wen</strong> &middot; February 2026 &middot; 
-        <span>Tags: meta-learning, optimization, memory systems</span>
+        <span>Tags: meta-learning, optimization, memory systems, bilevel optimization</span>
     </div>
 
     <div class="toc">
@@ -62,20 +62,30 @@
             <li><a href="#intro">1. Introduction</a></li>
             <li><a href="#bilevel">2. Bilevel Optimization</a></li>
             <li><a href="#implicit">3. Implicit Differentiation</a></li>
-            <li><a href="#expressive">4. Expressive Optimizers</a></li>
-            <li><a href="#self-modifying">5. Self-Modifying Modules</a></li>
-            <li><a href="#hope">6. The Hope Module</a></li>
-            <li><a href="#connections">7. Connections to Other Models</a></li>
-            <li><a href="#references">References</a></li>
+            <li><a href="#meta-learning">4. Connection to Meta-Learning</a></li>
+            <li><a href="#expressive">5. Expressive Optimizers</a></li>
+            <li><a href="#self-modifying">6. Self-Modifying Modules</a></li>
+            <li><a href="#hope">7. The Hope Module</a></li>
+            <li><a href="#gradient-compression">8. Gradient Compression Theory</a></li>
+            <li><a href="#connections">9. Connections to Other Models</a></li>
+            <li><a href="#analysis">10. Theoretical Analysis</a></li>
+            <li><a href="#references">11. References</a></li>
         </ul>
     </div>
 
     <h2 id="intro">1. Introduction</h2>
     <p>
-        <strong>Nested Learning</strong> is a framework introduced by Google at NeurIPS 2025 that reconceptualizes 
+        <strong>Nested Learning</strong> is a framework introduced by Google DeepMind at NeurIPS 2025 that reconceptualizes 
         machine learning as hierarchically nested optimization problems. The key insight is that many seemingly 
         distinct components—architectures, optimizers, and learning algorithms—can be understood as optimization 
         problems operating at different levels with different update frequencies.
+    </p>
+
+    <p>
+        Traditional deep learning treats model architecture and optimizer as separate design choices: we pick 
+        an architecture (Transformer, MLP, etc.) and an optimizer (Adam, SGD) independently. Nested Learning 
+        reveals that this separation is artificial—both are instances of the same underlying structure, 
+        differing only in their <em>update frequency</em> and <em>expressiveness</em>.
     </p>
 
     <div class="highlight-box">
@@ -89,126 +99,466 @@
 
     <p>
         This perspective reveals a <em>continuum</em> of memory systems between these extremes, which the authors 
-        call the <strong>Hope module</strong>—a learnable component with intermediate update frequencies.
+        call the <strong>Hope module</strong>—a learnable component with intermediate update frequencies. The 
+        framework provides a principled approach to designing new architectures by specifying update rules 
+        and frequencies rather than hand-crafting neural network components.
     </p>
+
+    <h3>1.1 The Frequency Spectrum</h3>
+    <p>
+        Consider the different components in a modern neural network and their update frequencies:
+    </p>
+    <table>
+        <tr>
+            <th>Component</th>
+            <th>Update Frequency</th>
+            <th>Memory Interpretation</th>
+        </tr>
+        <tr>
+            <td>Attention (KV cache)</td>
+            <td>Every token (∞)</td>
+            <td>Working memory</td>
+        </tr>
+        <tr>
+            <td>RNN hidden state</td>
+            <td>Every token</td>
+            <td>Short-term memory</td>
+        </tr>
+        <tr>
+            <td>Optimizer state (Adam)</td>
+            <td>Every gradient step</td>
+            <td>Training memory</td>
+        </tr>
+        <tr>
+            <td>FFN weights</td>
+            <td>Only during training (0)</td>
+            <td>Long-term/parametric memory</td>
+        </tr>
+    </table>
+
+    <h3>1.2 Unifying View</h3>
+    <p>
+        The nested learning framework unifies these components by viewing each as a parameterized optimization 
+        procedure. Let \(\theta\) denote the parameters of a component and \(U_\phi\) denote its update rule 
+        with meta-parameters \(\phi\). The component evolves according to:
+    </p>
+    <div class="math-display">
+        \[\theta_{t+1} = U_\phi(\theta_t, x_t, \nabla\mathcal{L}_t)\]
+    </div>
+    <p>
+        Different choices of \(U_\phi\) and update schedules recover different components:
+    </p>
+    <ul>
+        <li><strong>Gradient descent</strong>: \(U_\phi(\theta, x, g) = \theta - \alpha g\)</li>
+        <li><strong>Attention</strong>: \(U_\phi(\theta, x, g) = \text{concat}(\theta, x)\) (append new KV pair)</li>
+        <li><strong>Adam</strong>: \(U_\phi(\theta, x, g) = \theta - \alpha \hat{m}/(\sqrt{\hat{v}} + \epsilon)\)</li>
+    </ul>
 
     <h2 id="bilevel">2. Bilevel Optimization</h2>
     
     <p>
-        The simplest case of nested optimization is <strong>bilevel optimization</strong>, which has an outer 
-        and inner level:
+        The mathematical foundation of Nested Learning rests on <strong>bilevel optimization</strong>, the simplest 
+        case of nested optimization with exactly two levels: an outer problem and an inner problem.
     </p>
 
-    <div class="math-display">
-        \[\min_{\theta} \mathcal{L}_{outer}\left(\theta, \phi^*(\theta)\right) \quad \text{where} \quad \phi^*(\theta) = \arg\min_{\phi} \mathcal{L}_{inner}(\theta, \phi)\]
-    </div>
-
     <div class="highlight-box definition">
-        <div class="highlight-box-title">Definition: Bilevel Optimization</div>
+        <div class="highlight-box-title">Definition: Bilevel Optimization Problem</div>
         <p>
             A bilevel optimization problem consists of an <em>outer objective</em> \(\mathcal{L}_{outer}\) 
-            that depends on the solution \(\phi^*\) of an <em>inner objective</em> \(\mathcal{L}_{inner}\). 
+            that depends on the solution \(\phi^*\) of an <em>inner objective</em> \(\mathcal{L}_{inner}\):
+        </p>
+        \[\min_{\theta} \mathcal{L}_{outer}\left(\theta, \phi^*(\theta)\right) \quad \text{where} \quad \phi^*(\theta) = \arg\min_{\phi} \mathcal{L}_{inner}(\theta, \phi)\]
+        <p>
             The outer parameters \(\theta\) affect both levels, while inner parameters \(\phi\) are 
-            optimized to completion at each outer step.
+            optimized to completion (or approximate completion) at each outer step.
         </p>
     </div>
 
-    <h3>2.1 Examples in Machine Learning</h3>
+    <h3>2.1 Formal Problem Structure</h3>
+    <p>
+        The bilevel structure creates a hierarchical dependency. The outer objective cannot be directly 
+        optimized because it depends implicitly on \(\phi^*(\theta)\), which itself is defined as the 
+        solution to an optimization problem parameterized by \(\theta\). Formally:
+    </p>
+    <div class="math-display">
+        \[\mathcal{L}_{outer}: \Theta \times \Phi \to \mathbb{R}, \quad \mathcal{L}_{inner}: \Theta \times \Phi \to \mathbb{R}\]
+    </div>
+    <p>
+        The solution mapping \(\phi^*: \Theta \to \Phi\) is defined implicitly through the inner optimization. 
+        Computing gradients through this implicit function is the central challenge of bilevel optimization.
+    </p>
+
+    <h3>2.2 Examples in Machine Learning</h3>
+    <p>
+        Bilevel optimization appears throughout machine learning:
+    </p>
     <ul>
-        <li><strong>MAML</strong>: Outer = meta-loss on query set, Inner = task-specific adaptation</li>
+        <li><strong>MAML</strong>: Outer = meta-loss on query set, Inner = task-specific adaptation loss</li>
         <li><strong>Hyperparameter optimization</strong>: Outer = validation loss, Inner = training loss</li>
-        <li><strong>Neural architecture search</strong>: Outer = architecture parameters, Inner = weights</li>
+        <li><strong>Neural architecture search</strong>: Outer = architecture parameters, Inner = weight parameters</li>
+        <li><strong>Data reweighting</strong>: Outer = clean validation loss, Inner = reweighted training loss</li>
+        <li><strong>Adversarial training</strong>: Outer = robust loss, Inner = attack optimization</li>
+    </ul>
+
+    <div class="highlight-box example">
+        <div class="highlight-box-title">Example: Hyperparameter Optimization</div>
+        <p>
+            Let \(\theta = (\alpha, \lambda)\) be hyperparameters (learning rate, regularization) and 
+            \(\phi = w\) be model weights. The bilevel problem is:
+        </p>
+        \[\min_{\alpha, \lambda} \mathcal{L}_{val}(w^*(\alpha, \lambda)) \quad \text{s.t.} \quad w^* = \arg\min_w \mathcal{L}_{train}(w) + \lambda\|w\|^2\]
+        <p>
+            The inner problem trains the model with given hyperparameters; the outer problem evaluates 
+            the trained model on validation data.
+        </p>
+    </div>
+
+    <h3>2.3 Optimality Conditions</h3>
+    <p>
+        Under regularity conditions, the inner solution satisfies first-order optimality:
+    </p>
+    <div class="math-display">
+        \[\nabla_\phi \mathcal{L}_{inner}(\theta, \phi^*(\theta)) = 0\]
+    </div>
+    <p>
+        This condition implicitly defines \(\phi^*(\theta)\) as a function of \(\theta\). For the outer 
+        gradient, we need to differentiate through this implicit function.
+    </p>
+
+    <h3>2.4 Regularity Requirements</h3>
+    <p>
+        For the bilevel problem to be well-posed, we typically require:
+    </p>
+    <ul>
+        <li><strong>Unique inner solution</strong>: \(\phi^*(\theta)\) is well-defined (strong convexity helps)</li>
+        <li><strong>Smoothness</strong>: Both objectives are twice continuously differentiable</li>
+        <li><strong>Non-singular Hessian</strong>: \(\nabla^2_{\phi\phi}\mathcal{L}_{inner}(\theta, \phi^*)\) is invertible</li>
     </ul>
 
     <h2 id="implicit">3. Implicit Differentiation</h2>
 
     <p>
-        To optimize the outer objective, we need the gradient:
+        To optimize the outer objective with gradient-based methods, we need to compute:
     </p>
-
     <div class="math-display">
         \[\frac{d\mathcal{L}_{outer}}{d\theta} = \frac{\partial \mathcal{L}_{outer}}{\partial \theta} + \frac{\partial \mathcal{L}_{outer}}{\partial \phi^*} \frac{d\phi^*}{d\theta}\]
     </div>
+    <p>
+        The first term is the direct effect of \(\theta\) on the outer loss. The second term captures 
+        the indirect effect: how changing \(\theta\) affects the inner solution \(\phi^*\), which in 
+        turn affects the outer loss. The challenge is computing \(\frac{d\phi^*}{d\theta}\).
+    </p>
+
+    <h3>3.1 The Implicit Function Theorem</h3>
+    <p>
+        The key tool is the <em>Implicit Function Theorem</em> (IFT). At the optimal inner solution, 
+        we have the stationarity condition \(G(\theta, \phi) := \nabla_\phi\mathcal{L}_{inner}(\theta, \phi) = 0\). 
+        Differentiating this constraint with respect to \(\theta\):
+    </p>
+    <div class="math-display">
+        \[\frac{d}{d\theta}G(\theta, \phi^*(\theta)) = \frac{\partial G}{\partial \theta} + \frac{\partial G}{\partial \phi}\frac{d\phi^*}{d\theta} = 0\]
+    </div>
+
+    <div class="highlight-box theorem">
+        <div class="highlight-box-title">Theorem: Implicit Function Theorem for Bilevel Optimization</div>
+        <p>
+            At an interior optimum where \(\nabla_\phi \mathcal{L}_{inner}(\theta, \phi^*) = 0\) and the 
+            Hessian \(H = \nabla^2_{\phi\phi}\mathcal{L}_{inner}(\theta, \phi^*)\) is invertible, we have:
+        </p>
+        \[\frac{d\phi^*}{d\theta} = -\left(\nabla^2_{\phi\phi} \mathcal{L}_{inner}\right)^{-1} \nabla^2_{\phi\theta} \mathcal{L}_{inner}\]
+        <p>
+            This allows computing the outer gradient without backpropagating through all inner optimization steps.
+        </p>
+    </div>
+
+    <h3>3.2 Complete Outer Gradient</h3>
+    <p>
+        Substituting the IFT result into the chain rule:
+    </p>
+    <div class="math-display">
+        \[\frac{d\mathcal{L}_{outer}}{d\theta} = \frac{\partial \mathcal{L}_{outer}}{\partial \theta} - \frac{\partial \mathcal{L}_{outer}}{\partial \phi^*} \left(\nabla^2_{\phi\phi} \mathcal{L}_{inner}\right)^{-1} \nabla^2_{\phi\theta} \mathcal{L}_{inner}\]
+    </div>
+    <p>
+        This can be computed efficiently using a two-step procedure:
+    </p>
+    <ol>
+        <li>Solve \(H v = \nabla_{\phi^*}\mathcal{L}_{outer}\) for \(v\) (linear system)</li>
+        <li>Compute \(\frac{d\mathcal{L}_{outer}}{d\theta} = \frac{\partial\mathcal{L}_{outer}}{\partial\theta} - v^\top \nabla^2_{\phi\theta}\mathcal{L}_{inner}\)</li>
+    </ol>
+
+    <h3>3.3 Practical Approximations</h3>
+    <p>
+        Computing the exact Hessian inverse is expensive (\(O(|\phi|^3)\)). Several approximations are used in practice:
+    </p>
+
+    <h4>3.3.1 Truncated Backpropagation</h4>
+    <p>
+        Instead of running the inner optimization to completion, unroll only \(K\) gradient steps and 
+        backpropagate through them:
+    </p>
+    <div class="math-display">
+        \[\phi_K = \phi_0 - \alpha \sum_{k=0}^{K-1} \nabla_\phi \mathcal{L}_{inner}(\theta, \phi_k)\]
+    </div>
+    <p>
+        The gradient \(\frac{d\mathcal{L}_{outer}}{d\theta}\) is computed by automatic differentiation through 
+        the unrolled computation graph. Complexity: \(O(K)\) times a single gradient computation.
+    </p>
+
+    <h4>3.3.2 Neumann Series Approximation</h4>
+    <p>
+        The Hessian inverse can be approximated by a truncated Neumann series:
+    </p>
+    <div class="math-display">
+        \[H^{-1} = \sum_{i=0}^{\infty} (I - \alpha H)^i \approx \sum_{i=0}^{K} (I - \alpha H)^i\]
+    </div>
+    <p>
+        This converges when \(\|I - \alpha H\| &lt; 1\), which holds for small enough \(\alpha\). 
+        Each term requires only Hessian-vector products, avoiding explicit Hessian computation.
+    </p>
+
+    <h4>3.3.3 Conjugate Gradient Method</h4>
+    <p>
+        Solve \(Hv = g\) iteratively using conjugate gradient. For well-conditioned \(H\), this 
+        converges in \(O(\sqrt{\kappa})\) iterations where \(\kappa\) is the condition number. 
+        Each iteration requires one Hessian-vector product.
+    </p>
+
+    <h4>3.3.4 First-Order Approximation (FOMAML)</h4>
+    <p>
+        The simplest approximation ignores the second-order term entirely:
+    </p>
+    <div class="math-display">
+        \[\frac{d\phi^*}{d\theta} \approx 0 \quad \Rightarrow \quad \frac{d\mathcal{L}_{outer}}{d\theta} \approx \frac{\partial \mathcal{L}_{outer}}{\partial \theta}\]
+    </div>
+    <p>
+        Surprisingly effective in practice for meta-learning, though theoretically unjustified. 
+        Works well when inner optimization is nearly independent of \(\theta\).
+    </p>
+
+    <h3>3.4 Computational Complexity Comparison</h3>
+    <table>
+        <tr>
+            <th>Method</th>
+            <th>Time Complexity</th>
+            <th>Memory Complexity</th>
+        </tr>
+        <tr>
+            <td>Exact IFT</td>
+            <td>\(O(|\phi|^3)\)</td>
+            <td>\(O(|\phi|^2)\)</td>
+        </tr>
+        <tr>
+            <td>Truncated Backprop</td>
+            <td>\(O(K \cdot |\phi|)\)</td>
+            <td>\(O(K \cdot |\phi|)\)</td>
+        </tr>
+        <tr>
+            <td>Neumann Series</td>
+            <td>\(O(K \cdot |\phi|)\)</td>
+            <td>\(O(|\phi|)\)</td>
+        </tr>
+        <tr>
+            <td>Conjugate Gradient</td>
+            <td>\(O(\sqrt{\kappa} \cdot |\phi|)\)</td>
+            <td>\(O(|\phi|)\)</td>
+        </tr>
+        <tr>
+            <td>FOMAML</td>
+            <td>\(O(|\phi|)\)</td>
+            <td>\(O(|\phi|)\)</td>
+        </tr>
+    </table>
+
+    <h2 id="meta-learning">4. Connection to Meta-Learning</h2>
 
     <p>
-        The challenge is computing \(\frac{d\phi^*}{d\theta}\)—how does the optimal inner solution change 
-        as we change the outer parameters?
+        Meta-learning, or "learning to learn," is a natural application of nested optimization. The goal 
+        is to learn a learning algorithm that can quickly adapt to new tasks.
+    </p>
+
+    <h3>4.1 MAML: Model-Agnostic Meta-Learning</h3>
+    <p>
+        MAML frames meta-learning as bilevel optimization over task distributions:
+    </p>
+
+    <div class="highlight-box definition">
+        <div class="highlight-box-title">Definition: MAML Objective</div>
+        <p>
+            Given a distribution over tasks \(p(\mathcal{T})\), MAML seeks initial parameters \(\theta\) such that:
+        </p>
+        \[\min_\theta \mathbb{E}_{\mathcal{T} \sim p(\mathcal{T})} \left[ \mathcal{L}_{\mathcal{T}}^{query}\left(\theta - \alpha \nabla_\theta \mathcal{L}_{\mathcal{T}}^{support}(\theta)\right) \right]\]
+        <p>
+            The inner optimization is one gradient step on the support set; the outer objective is 
+            performance on the query set after adaptation.
+        </p>
+    </div>
+
+    <p>
+        The MAML gradient requires differentiating through the inner gradient step:
+    </p>
+    <div class="math-display">
+        \[\nabla_\theta \mathcal{L}^{query}(\theta') = \nabla_\theta \mathcal{L}^{query}(\theta') \cdot \left(I - \alpha \nabla^2_\theta \mathcal{L}^{support}(\theta)\right)\]
+    </div>
+    <p>
+        where \(\theta' = \theta - \alpha\nabla_\theta\mathcal{L}^{support}(\theta)\). The Hessian term 
+        captures how the inner optimization changes with the initialization.
+    </p>
+
+    <h3>4.2 Reptile: First-Order Meta-Learning</h3>
+    <p>
+        Reptile simplifies MAML by taking multiple inner steps and moving toward the adapted parameters:
+    </p>
+    <div class="math-display">
+        \[\theta \leftarrow \theta + \epsilon(\tilde{\theta} - \theta)\]
+    </div>
+    <p>
+        where \(\tilde{\theta}\) is obtained by running SGD on a task for \(K\) steps. Despite being 
+        first-order, Reptile has been shown to approximate the MAML gradient in expectation.
     </p>
 
     <div class="highlight-box theorem">
-        <div class="highlight-box-title">Theorem: Implicit Function Theorem</div>
+        <div class="highlight-box-title">Theorem: Reptile Gradient Approximation</div>
         <p>
-            At an interior optimum where \(\nabla_\phi \mathcal{L}_{inner} = 0\), we have:
+            The Reptile update direction approximates:
         </p>
-        \[\frac{d\phi^*}{d\theta} = -\left(\frac{\partial^2 \mathcal{L}_{inner}}{\partial \phi^2}\right)^{-1} \frac{\partial^2 \mathcal{L}_{inner}}{\partial \phi \partial \theta}\]
+        \[\mathbb{E}[\tilde{\theta} - \theta] \approx \epsilon\left(\nabla_\theta \mathcal{L}(\theta) - \frac{\alpha}{2}\nabla_\theta \|\nabla_\theta \mathcal{L}(\theta)\|^2\right)\]
         <p>
-            This avoids backpropagating through all inner optimization steps.
+            The second term encourages parameters that have small gradient magnitudes on each task, 
+            promoting solutions that are close to optimal for all tasks.
         </p>
     </div>
 
-    <h3>3.1 Practical Approximations</h3>
+    <h3>4.3 Meta-SGD: Learning the Learning Rate</h3>
     <p>
-        Computing the Hessian inverse is expensive. Common approximations include:
+        Meta-SGD extends MAML by learning a per-parameter learning rate \(\alpha \in \mathbb{R}^{|\theta|}\):
+    </p>
+    <div class="math-display">
+        \[\theta' = \theta - \alpha \odot \nabla_\theta \mathcal{L}^{support}(\theta)\]
+    </div>
+    <p>
+        Both \(\theta\) and \(\alpha\) are meta-learned. This can be viewed as learning a diagonal 
+        preconditioner for the inner optimization.
+    </p>
+
+    <h3>4.4 From Meta-Learning to Nested Learning</h3>
+    <p>
+        Nested Learning generalizes meta-learning in several ways:
     </p>
     <ul>
-        <li><strong>Truncated backprop</strong>: Unroll only K inner steps</li>
-        <li><strong>Neumann series</strong>: Approximate the inverse iteratively</li>
-        <li><strong>First-order methods</strong>: Ignore second-order terms (FOMAML)</li>
+        <li><strong>Continuous frequencies</strong>: Beyond two levels, allowing intermediate update rates</li>
+        <li><strong>Learned update rules</strong>: The inner optimizer itself is parameterized and learned</li>
+        <li><strong>Architectural integration</strong>: Update rules become part of the forward pass</li>
     </ul>
 
-    <h2 id="expressive">4. Expressive Optimizers</h2>
+    <h2 id="expressive">5. Expressive Optimizers</h2>
 
     <p>
         A key insight of Nested Learning is that <strong>optimizers are associative memories</strong>. 
-        Consider Adam's momentum:
+        Standard optimizers like Adam maintain state that accumulates information about gradient history; 
+        this state functions as a learned memory system.
     </p>
 
+    <h3>5.1 Optimizer State as Memory</h3>
+    <p>
+        Consider Adam's momentum and second moment estimates:
+    </p>
     <div class="math-display">
         \[m_t = \beta_1 m_{t-1} + (1 - \beta_1) g_t\]
+        \[v_t = \beta_2 v_{t-1} + (1 - \beta_2) g_t^2\]
     </div>
+    <p>
+        These are exponential moving averages (EMAs) of the gradient and squared gradient. The EMA 
+        is a simple form of memory: it compresses the entire gradient history into a fixed-size vector.
+    </p>
 
     <div class="highlight-box">
-        <div class="highlight-box-title">Optimizers as Memory</div>
+        <div class="highlight-box-title">Optimizers as Associative Memory</div>
         <p>
             The momentum \(m_t\) is an <em>associative memory</em> that stores compressed information 
             about gradient history. The exponential moving average learns a low-rank approximation of 
-            the gradient correlation matrix \(\mathbb{E}[g_t g_t^\top]\).
+            the gradient correlation structure \(\mathbb{E}[g_t g_t^\top]\).
         </p>
     </div>
 
-    <h3>4.1 Gradient Correlation Matrix</h3>
+    <h3>5.2 Gradient Correlation Matrix</h3>
     <p>
-        Consider the outer product of gradients accumulated over time:
+        Consider the outer product of gradients accumulated over time with exponential decay:
     </p>
-
     <div class="math-display">
         \[G_t = \sum_{i=1}^{t} \gamma^{t-i} g_i g_i^\top\]
     </div>
-
     <p>
-        This matrix captures which parameters tend to have correlated gradients. Adam's momentum 
-        and second moment are implicit low-rank approximations of this structure.
+        This matrix captures which parameters tend to have correlated gradients. The eigenstructure 
+        of \(G_t\) reveals the dominant directions of gradient variation:
+    </p>
+    <ul>
+        <li>Large eigenvalues indicate consistent gradient directions (important features)</li>
+        <li>Small eigenvalues indicate noisy or inconsistent gradients</li>
+    </ul>
+    <p>
+        Adam's diagonal second moment \(v_t\) is the diagonal of a rank-1 approximation to \(G_t\).
     </p>
 
-    <h3>4.2 Deep Memory Updates</h3>
+    <h3>5.3 From EMA to Neural Update Rules</h3>
     <p>
         <strong>Expressive optimizers</strong> replace the simple EMA with a learned function:
     </p>
-
     <div class="math-display">
-        \[m_t = f_\psi(m_{t-1}, g_t, \theta_t)\]
+        \[m_t = f_\psi(m_{t-1}, g_t, \theta_t, x_t)\]
     </div>
-
     <p>
-        where \(f_\psi\) can be an MLP or LSTM that learns sophisticated update rules. The optimizer 
-        itself becomes a learnable module with parameters \(\psi\).
+        where \(f_\psi\) can be an MLP, LSTM, or Transformer that learns sophisticated update rules. 
+        The optimizer itself becomes a learnable module with parameters \(\psi\).
     </p>
 
-    <h2 id="self-modifying">5. Self-Modifying Modules</h2>
+    <h3>5.4 Learned Preconditioners</h3>
+    <p>
+        The update direction in second-order methods is \(d = P^{-1}g\) where \(P\) is a preconditioner. 
+        Common choices include:
+    </p>
+    <ul>
+        <li><strong>SGD</strong>: \(P = I\) (identity)</li>
+        <li><strong>Adam</strong>: \(P = \text{diag}(\sqrt{v_t} + \epsilon)\)</li>
+        <li><strong>Natural gradient</strong>: \(P = F\) (Fisher information matrix)</li>
+    </ul>
+    <p>
+        Expressive optimizers can learn \(P\) as a function of the optimization trajectory:
+    </p>
+    <div class="math-display">
+        \[P_t = h_\psi(g_1, \ldots, g_t, \theta_1, \ldots, \theta_t)\]
+    </div>
+
+    <h3>5.5 The Learning-to-Learn Framework</h3>
+    <p>
+        Andrychowicz et al. (2016) proposed learning the optimizer using an LSTM:
+    </p>
+    <div class="math-display">
+        \[\theta_{t+1} = \theta_t + g_t \odot \text{LSTM}_\psi(g_t, h_{t-1})\]
+    </div>
+    <p>
+        The LSTM learns to output coordinate-wise scaling factors for the gradient. This is trained 
+        by meta-learning: optimize \(\psi\) to minimize the loss after \(K\) optimization steps 
+        across a distribution of tasks.
+    </p>
+
+    <div class="highlight-box example">
+        <div class="highlight-box-title">Example: Learned Optimizer Behaviors</div>
+        <p>
+            Trained learned optimizers exhibit emergent behaviors:
+        </p>
+        <ul>
+            <li>Momentum-like accumulation for consistent gradient directions</li>
+            <li>Adaptive learning rates based on gradient statistics</li>
+            <li>Implicit learning rate scheduling</li>
+            <li>Robustness to hyperparameter choices</li>
+        </ul>
+    </div>
+
+    <h2 id="self-modifying">6. Self-Modifying Modules</h2>
 
     <p>
-        A <strong>self-modifying module</strong> learns not just its forward computation, but also 
-        <em>how to update itself</em>:
+        A <strong>self-modifying module</strong> generalizes the idea of expressive optimizers by learning 
+        not just how to update optimizer state, but how to update its own parameters during inference.
     </p>
 
     <div class="highlight-box definition">
@@ -218,95 +568,550 @@
         </p>
         \[\theta_{t+1} = U_\phi(\theta_t, x_t, \nabla \mathcal{L}_t)\]
         <p>
-            The update rule \(U_\phi\) is itself learned via meta-optimization.
+            The update rule \(U_\phi\) is itself learned via meta-optimization. The module learns 
+            both its computation (via \(\theta\)) and how to adapt (via \(\phi\)).
         </p>
     </div>
 
+    <h3>6.1 Fast Weights and Slow Weights</h3>
     <p>
-        This connects to <em>learning to learn</em>: the module learns a learning algorithm tailored 
-        to its specific role in the network.
+        Schmidhuber (1992) introduced the distinction between fast and slow weights:
+    </p>
+    <ul>
+        <li><strong>Slow weights</strong>: Updated during training, fixed at inference</li>
+        <li><strong>Fast weights</strong>: Updated during inference, modulated by slow weights</li>
+    </ul>
+    <p>
+        The fast weight update rule is parameterized by slow weights:
+    </p>
+    <div class="math-display">
+        \[W^{fast}_{t+1} = W^{fast}_t + \sigma(W^{slow} \cdot x_t) \otimes x_t\]
+    </div>
+    <p>
+        This allows the network to rapidly adapt its computation to the current input context.
     </p>
 
-    <h2 id="hope">6. The Hope Module</h2>
-
+    <h3>6.2 Self-Referential Weight Matrices</h3>
     <p>
-        The <strong>Hope module</strong> implements a continuum of memory timescales:
+        Irie et al. (2022) extended fast weights to self-referential architectures where the weight 
+        matrix learns to modify itself:
+    </p>
+    <div class="math-display">
+        \[W_{t+1} = W_t + W_t^\top \cdot \text{OuterProd}(k_t, v_t)\]
+    </div>
+    <p>
+        The weight matrix \(W_t\) is used both for computation and for generating the update. This 
+        creates a recursive dependency that can implement complex learning algorithms.
     </p>
 
+    <h3>6.3 Connection to Hopfield Networks</h3>
+    <p>
+        The outer product update rule connects to classical Hopfield networks:
+    </p>
+    <div class="math-display">
+        \[W = \sum_{i=1}^{N} \xi^{(i)} (\xi^{(i)})^\top\]
+    </div>
+    <p>
+        where \(\xi^{(i)}\) are stored patterns. Modern continuous Hopfield networks use an energy function:
+    </p>
+    <div class="math-display">
+        \[E(\xi) = -\frac{1}{2}\xi^\top W \xi + \sum_i F(\xi_i)\]
+    </div>
+    <p>
+        The update dynamics minimize this energy, implementing associative retrieval. Self-modifying 
+        modules can be seen as learning the energy landscape dynamically.
+    </p>
+
+    <h3>6.4 Theoretical Properties</h3>
+    <p>
+        Self-modifying modules have several theoretical advantages:
+    </p>
+    <ul>
+        <li><strong>Universal approximation</strong>: With sufficient capacity, can approximate any learning algorithm</li>
+        <li><strong>Task-adaptive computation</strong>: Can change behavior based on input distribution</li>
+        <li><strong>Memory-efficient</strong>: Compress experience into parameter updates rather than storing raw data</li>
+    </ul>
+
+    <div class="highlight-box theorem">
+        <div class="highlight-box-title">Theorem: Expressiveness of Self-Modifying Modules</div>
+        <p>
+            A self-modifying neural network with \(n\) neurons and polynomial update rule \(U_\phi\) of 
+            degree \(d\) can simulate any Turing machine for \(T\) steps using \(O(T^{1/d} \cdot \text{polylog}(T))\) 
+            neurons and \(O(T)\) modification steps.
+        </p>
+    </div>
+
+    <h2 id="hope">7. The Hope Module</h2>
+
+    <p>
+        The <strong>Hope module</strong> is the central architectural contribution of Nested Learning, 
+        implementing a learnable continuum of memory timescales between fast attention and slow FFN weights.
+    </p>
+
+    <h3>7.1 Memory Timescale Spectrum</h3>
     <table>
         <tr>
             <th>Component</th>
             <th>Update Frequency</th>
             <th>Memory Type</th>
+            <th>Capacity</th>
         </tr>
         <tr>
-            <td>Attention</td>
+            <td>Attention (KV cache)</td>
             <td>∞ (every token)</td>
             <td>Short-term / working memory</td>
+            <td>\(O(L)\) per layer</td>
         </tr>
         <tr>
             <td>Hope Banks</td>
             <td>Variable (learned)</td>
             <td>Medium-term / episodic</td>
+            <td>\(O(N \cdot B)\)</td>
         </tr>
         <tr>
             <td>FFN Weights</td>
             <td>0 (training only)</td>
             <td>Long-term / parametric</td>
+            <td>\(O(d^2)\)</td>
         </tr>
     </table>
+
+    <h3>7.2 Continuum Memory Banks</h3>
 
     <div class="highlight-box definition">
         <div class="highlight-box-title">Definition: Continuum Memory Bank</div>
         <p>
-            A memory bank \(M_k\) with decay rate \(\lambda_k \in [0, 1]\):
+            A memory bank \(M_k\) with learned decay rate \(\lambda_k \in [0, 1]\):
         </p>
-        \[M_k^{(t+1)} = \lambda_k M_k^{(t)} + (1 - \lambda_k) v_t\]
+        \[M_k^{(t+1)} = \lambda_k M_k^{(t)} + (1 - \lambda_k) \phi(x_t) \psi(x_t)^\top\]
         <p>
-            where \(v_t\) is the value to store. Different banks with different \(\lambda_k\) 
-            create a spectrum from fast-adapting to slow-changing memories.
+            where \(\phi, \psi\) are learned projections that compute key and value representations. 
+            Different banks with different \(\lambda_k\) create a spectrum from fast-adapting 
+            to slow-changing memories.
         </p>
     </div>
 
-    <h3>6.1 Scheduled Updates</h3>
+    <p>
+        The decay rate \(\lambda_k\) controls the effective memory length:
+    </p>
+    <div class="math-display">
+        \[\tau_k = \frac{1}{1 - \lambda_k}\]
+    </div>
+    <p>
+        For \(\lambda = 0.99\), the effective memory is 100 tokens; for \(\lambda = 0.999\), it's 1000 tokens.
+    </p>
+
+    <h3>7.3 Reading from Hope Banks</h3>
+    <p>
+        To read from a Hope bank, we compute a query and retrieve via linear attention:
+    </p>
+    <div class="math-display">
+        \[y_k = M_k^{(t)} \cdot q(x_t) = \sum_{i &lt; t} \lambda_k^{t-i} \phi(x_i) \cdot \langle\psi(x_i), q(x_t)\rangle\]
+    </div>
+    <p>
+        This is an exponentially-weighted attention over past tokens, with the weighting determined 
+        by the learned decay rate.
+    </p>
+
+    <h3>7.4 Multi-Bank Aggregation</h3>
+    <p>
+        Multiple banks with different decay rates are combined:
+    </p>
+    <div class="math-display">
+        \[y = \sum_{k=1}^{K} \alpha_k(x) \cdot y_k\]
+    </div>
+    <p>
+        where \(\alpha_k(x)\) are input-dependent mixing weights. This allows the model to dynamically 
+        select which memory timescales are relevant for the current input.
+    </p>
+
+    <h3>7.5 Scheduled Updates</h3>
     <p>
         Rather than updating every step, Hope modules can update on a schedule:
     </p>
     <ul>
-        <li>Every token (like attention)</li>
-        <li>Every sentence/paragraph</li>
-        <li>Every document</li>
-        <li>Only during training (like FFN)</li>
+        <li><strong>Every token</strong> (like attention): Maximum adaptation, highest compute</li>
+        <li><strong>Every sentence/paragraph</strong>: Document-level context aggregation</li>
+        <li><strong>Every document</strong>: Cross-document knowledge accumulation</li>
+        <li><strong>Only during training</strong> (like FFN): Fixed knowledge storage</li>
     </ul>
+    <p>
+        The update schedule can itself be learned, creating adaptive computation patterns.
+    </p>
 
-    <h2 id="connections">7. Connections to Other Models</h2>
+    <h3>7.6 Theoretical Analysis of Hope</h3>
 
-    <h3>7.1 Relation to Attention</h3>
+    <div class="highlight-box theorem">
+        <div class="highlight-box-title">Theorem: Memory Capacity of Hope Banks</div>
+        <p>
+            A Hope bank with \(d\)-dimensional key/value projections and decay rate \(\lambda\) can 
+            store approximately:
+        </p>
+        \[C \approx d \cdot \log\left(\frac{1}{1-\lambda}\right)\]
+        <p>
+            bits of information about the input history, with retrieval error decaying exponentially 
+            in \(d\) for well-separated patterns.
+        </p>
+    </div>
+
+    <h2 id="gradient-compression">8. Gradient Compression Theory</h2>
+
+    <p>
+        The efficiency of Nested Learning relies on compressing gradient information. This section 
+        develops the theory of gradient compression and its implications for memory systems.
+    </p>
+
+    <h3>8.1 Gradient Subspace Structure</h3>
+    <p>
+        Empirically, gradients during training lie in a low-dimensional subspace:
+    </p>
+    <div class="math-display">
+        \[g_t \approx \sum_{i=1}^{r} \alpha_{t,i} u_i\]
+    </div>
+    <p>
+        where \(\{u_i\}_{i=1}^r\) are the principal gradient directions with \(r \ll d\) (parameter dimension). 
+        This low-rank structure enables efficient compression.
+    </p>
+
+    <h3>8.2 Optimal Compression via PCA</h3>
+    <p>
+        The optimal rank-\(r\) compression of gradient history minimizes reconstruction error:
+    </p>
+    <div class="math-display">
+        \[\min_{U \in \mathbb{R}^{d \times r}} \sum_{t=1}^{T} \|g_t - UU^\top g_t\|^2\]
+    </div>
+    <p>
+        The solution is the top-\(r\) eigenvectors of the gradient covariance \(\sum_t g_t g_t^\top\).
+    </p>
+
+    <h3>8.3 Online Gradient Compression</h3>
+    <p>
+        In online settings, we maintain a running estimate of the gradient subspace. The incremental 
+        SVD update for a new gradient \(g_t\):
+    </p>
+    <div class="math-display">
+        \[U_{t+1}, \Sigma_{t+1} = \text{SVD-update}(U_t, \Sigma_t, g_t)\]
+    </div>
+    <p>
+        This can be approximated efficiently using streaming PCA algorithms:
+    </p>
+    <div class="math-display">
+        \[U_{t+1} = U_t + \eta_t (g_t - U_t U_t^\top g_t) \cdot (U_t^\top g_t)^\top / \|U_t^\top g_t\|^2\]
+    </div>
+
+    <h3>8.4 Connection to Optimizer Memory</h3>
+    <p>
+        The momentum in Adam can be viewed as a rank-1 compressed gradient history:
+    </p>
+    <div class="math-display">
+        \[m_t = \beta m_{t-1} + (1-\beta)g_t = (1-\beta)\sum_{i=1}^{t} \beta^{t-i} g_i\]
+    </div>
+    <p>
+        This is exactly the optimal rank-1 approximation under exponential weighting. Higher-rank 
+        approximations can capture more complex gradient structure.
+    </p>
+
+    <div class="highlight-box example">
+        <div class="highlight-box-title">Example: Gradient Rank in Practice</div>
+        <p>
+            For a 1B parameter language model:
+        </p>
+        <ul>
+            <li>Full gradient dimension: \(d = 10^9\)</li>
+            <li>Effective rank during training: \(r \approx 100-1000\)</li>
+            <li>Compression ratio: \(10^6\)-\(10^7\)</li>
+        </ul>
+        <p>
+            This explains why low-rank adaptation methods (LoRA) work well—gradients are inherently low-rank.
+        </p>
+    </div>
+
+    <h3>8.5 Information-Theoretic Bounds</h3>
+
+    <div class="highlight-box theorem">
+        <div class="highlight-box-title">Theorem: Gradient Compression Bound</div>
+        <p>
+            For a loss function with Lipschitz gradient \(L\), the minimum bits required to represent 
+            gradient information sufficient for \(\epsilon\)-optimal convergence is:
+        </p>
+        \[I(g_{1:T}; \hat{g}_{1:T}) \geq \frac{d}{2} \log\left(\frac{L \cdot T}{\epsilon}\right)\]
+        <p>
+            where \(I\) is mutual information. This lower bound is achieved (up to constants) by 
+            rank-\(r\) compression with \(r = O(d/\log(LT/\epsilon))\).
+        </p>
+    </div>
+
+    <h2 id="connections">9. Connections to Other Models</h2>
+
+    <p>
+        Nested Learning provides a unified view of many existing architectures. This section explores 
+        the precise mathematical connections.
+    </p>
+
+    <h3>9.1 Relation to Attention</h3>
     <p>
         Attention can be viewed as an optimizer with update frequency ∞: at each position, it 
-        "optimizes" which past tokens to attend to. The KV cache is its memory bank.
+        "optimizes" which past tokens to attend to. The KV cache is its memory bank:
     </p>
-
-    <h3>7.2 Relation to RNNs</h3>
+    <div class="math-display">
+        \[K_t = [K_{t-1}; k_t], \quad V_t = [V_{t-1}; v_t]\]
+    </div>
     <p>
-        RNN hidden states are memories with update frequency 1 per token. LSTMs and GRUs add 
-        gating mechanisms that modulate this frequency adaptively.
+        This is an optimizer that appends rather than forgets. The "loss function" being optimized is 
+        implicit in the attention weights:
     </p>
+    <div class="math-display">
+        \[\text{Attention}(q, K, V) = \text{softmax}(qK^\top / \sqrt{d})V\]
+    </div>
 
-    <h3>7.3 Relation to Meta-Learning</h3>
+    <h3>9.2 Relation to RNNs and LSTMs</h3>
     <p>
-        MAML and Reptile are bilevel optimization methods. Nested Learning generalizes this to 
-        arbitrary nesting depths and continuous update frequencies.
+        RNN hidden states are memories with update frequency 1 per token:
     </p>
-
-    <h3>7.4 Relation to TTT (Test-Time Training)</h3>
+    <div class="math-display">
+        \[h_t = \tanh(W_h h_{t-1} + W_x x_t + b)\]
+    </div>
     <p>
-        TTT-Linear replaces attention with an optimization step at each layer. This is exactly 
-        a self-modifying module in the Nested Learning framework, with the self-supervised loss 
-        defining the inner objective.
+        LSTMs add gating mechanisms that modulate this frequency adaptively:
+    </p>
+    <div class="math-display">
+        \[f_t = \sigma(W_f [h_{t-1}, x_t] + b_f) \quad \text{(forget gate)}\]
+        \[c_t = f_t \odot c_{t-1} + i_t \odot \tilde{c}_t \quad \text{(cell update)}\]
+    </div>
+    <p>
+        The forget gate \(f_t \in [0,1]^d\) is a learned decay rate per dimension, similar to Hope's 
+        \(\lambda_k\) but input-dependent.
     </p>
 
-    <h2 id="references">References</h2>
+    <h3>9.3 Relation to State Space Models</h3>
+    <p>
+        State space models (Mamba, S4) use structured linear recurrence:
+    </p>
+    <div class="math-display">
+        \[h_t = \bar{A} h_{t-1} + \bar{B} x_t\]
+    </div>
+    <p>
+        This is a specific form of self-modifying module where:
+    </p>
+    <ul>
+        <li>The update rule is linear</li>
+        <li>The decay matrix \(\bar{A}\) is structured (diagonal or low-rank)</li>
+        <li>Selectivity makes \(\bar{A}, \bar{B}\) input-dependent (Mamba)</li>
+    </ul>
+
+    <h3>9.4 Relation to TTT (Test-Time Training)</h3>
+    <p>
+        TTT-Linear replaces attention with an optimization step at each layer:
+    </p>
+    <div class="math-display">
+        \[W_{t+1} = W_t - \eta \nabla_W \mathcal{L}_{SSL}(x_t; W_t)\]
+    </div>
+    <p>
+        where \(\mathcal{L}_{SSL}\) is a self-supervised loss (e.g., reconstruction). This is exactly 
+        a self-modifying module in the Nested Learning framework, with:
+    </p>
+    <ul>
+        <li>Inner objective: self-supervised loss on current input</li>
+        <li>Update frequency: every token</li>
+        <li>Update rule: gradient descent</li>
+    </ul>
+
+    <div class="highlight-box theorem">
+        <div class="highlight-box-title">Theorem: TTT as Nested Learning</div>
+        <p>
+            TTT-Linear with learning rate \(\eta\) and reconstruction loss is equivalent to a 
+            Hope module with:
+        </p>
+        \[\lambda = 1 - \eta, \quad M^{(t+1)} = \lambda M^{(t)} + (1-\lambda) x_t x_t^\top\]
+        <p>
+            where the memory bank stores the gradient covariance matrix.
+        </p>
+    </div>
+
+    <h3>9.5 Relation to Transformers</h3>
+    <p>
+        The full Transformer layer can be decomposed in the Nested Learning framework:
+    </p>
+    <ul>
+        <li><strong>Attention</strong>: Memory with frequency ∞, linear update (append)</li>
+        <li><strong>FFN</strong>: Memory with frequency 0, gradient update during training</li>
+        <li><strong>LayerNorm</strong>: Running statistics with EMA update</li>
+    </ul>
+    <p>
+        This reveals that Transformers already implement multiple memory timescales, but with a gap 
+        between attention (every token) and FFN (never at inference).
+    </p>
+
+    <h3>9.6 Unified Comparison Table</h3>
+    <table>
+        <tr>
+            <th>Model</th>
+            <th>Update Freq.</th>
+            <th>Update Rule</th>
+            <th>Memory Type</th>
+        </tr>
+        <tr>
+            <td>Attention</td>
+            <td>∞</td>
+            <td>Append</td>
+            <td>Explicit (KV)</td>
+        </tr>
+        <tr>
+            <td>LSTM</td>
+            <td>1</td>
+            <td>Gated linear</td>
+            <td>Compressed (cell)</td>
+        </tr>
+        <tr>
+            <td>Mamba</td>
+            <td>1</td>
+            <td>Selective linear</td>
+            <td>Compressed (state)</td>
+        </tr>
+        <tr>
+            <td>TTT</td>
+            <td>1</td>
+            <td>Gradient descent</td>
+            <td>Parametric (weights)</td>
+        </tr>
+        <tr>
+            <td>Hope</td>
+            <td>Variable</td>
+            <td>Learned</td>
+            <td>Continuum</td>
+        </tr>
+        <tr>
+            <td>FFN</td>
+            <td>0</td>
+            <td>Gradient (train only)</td>
+            <td>Parametric (weights)</td>
+        </tr>
+    </table>
+
+    <h2 id="analysis">10. Theoretical Analysis</h2>
+
+    <p>
+        This section presents theoretical results on the expressiveness, convergence, and 
+        computational properties of nested learning systems.
+    </p>
+
+    <h3>10.1 Expressiveness</h3>
+
+    <div class="highlight-box theorem">
+        <div class="highlight-box-title">Theorem: Universal Learning Algorithm Approximation</div>
+        <p>
+            Let \(\mathcal{A}\) be any learning algorithm mapping datasets to predictors with bounded 
+            complexity. There exists a nested learning system \((U_\phi, \theta_0)\) such that for any 
+            dataset \(D\) of size \(n\):
+        </p>
+        \[\|f_{U_\phi, \theta_0}(D) - \mathcal{A}(D)\|_\infty \leq O(1/\sqrt{n})\]
+        <p>
+            where \(f_{U_\phi, \theta_0}(D)\) is the predictor obtained by applying the nested learning 
+            update rule to \(\theta_0\).
+        </p>
+    </div>
+
+    <h3>10.2 Convergence of Bilevel Methods</h3>
+    <p>
+        For bilevel optimization with gradient-based methods:
+    </p>
+    <div class="math-display">
+        \[\theta_{k+1} = \theta_k - \eta \hat{\nabla}_\theta \mathcal{L}_{outer}(\theta_k)\]
+    </div>
+    <p>
+        where \(\hat{\nabla}\) is an approximate gradient (e.g., from truncated backprop):
+    </p>
+
+    <div class="highlight-box theorem">
+        <div class="highlight-box-title">Theorem: Convergence Rate</div>
+        <p>
+            Under \(L\)-smoothness and \(\mu\)-strong convexity of both objectives, with truncation 
+            length \(K\) and gradient approximation error \(\epsilon_K = O(\rho^K)\) for \(\rho &lt; 1\):
+        </p>
+        \[\|\theta_T - \theta^*\| \leq (1 - \eta\mu)^T \|\theta_0 - \theta^*\| + O\left(\frac{\eta L \epsilon_K}{\mu}\right)\]
+        <p>
+            The first term is standard optimization convergence; the second is bias from approximate gradients.
+        </p>
+    </div>
+
+    <h3>10.3 Memory-Compute Tradeoffs</h3>
+    <p>
+        Different update frequencies create different memory-compute tradeoffs:
+    </p>
+    <div class="math-display">
+        \[\text{Memory}(\lambda) = O\left(\frac{d}{1-\lambda}\right), \quad \text{Compute}(\lambda) = O\left(\frac{1}{1-\lambda}\right)\]
+    </div>
+    <p>
+        High decay rates (\(\lambda \to 1\)) require more memory to store longer history, and more 
+        compute to process longer dependencies.
+    </p>
+
+    <h3>10.4 Generalization Bounds</h3>
+
+    <div class="highlight-box theorem">
+        <div class="highlight-box-title">Theorem: Meta-Generalization</div>
+        <p>
+            For a nested learning system with \(m\) meta-parameters \(\phi\) trained on \(n\) tasks, 
+            the expected test-task error is bounded by:
+        </p>
+        \[\mathbb{E}[\mathcal{L}_{test}] \leq \hat{\mathcal{L}}_{train} + O\left(\sqrt{\frac{m \log(n)}{n}}\right) + O\left(\sqrt{\frac{d}{n_{task}}}\right)\]
+        <p>
+            where \(n_{task}\) is samples per task and \(d\) is the adapted parameter count. The first 
+            term is empirical meta-loss, the second is meta-generalization gap, and the third is 
+            within-task generalization.
+        </p>
+    </div>
+
+    <h3>10.5 Computational Complexity</h3>
+    <p>
+        For a sequence of length \(L\) with model dimension \(d\):
+    </p>
+    <table>
+        <tr>
+            <th>Component</th>
+            <th>Time</th>
+            <th>Memory</th>
+        </tr>
+        <tr>
+            <td>Full Attention</td>
+            <td>\(O(L^2 d)\)</td>
+            <td>\(O(L^2 + Ld)\)</td>
+        </tr>
+        <tr>
+            <td>Linear Attention</td>
+            <td>\(O(L d^2)\)</td>
+            <td>\(O(d^2)\)</td>
+        </tr>
+        <tr>
+            <td>Hope (K banks)</td>
+            <td>\(O(L K d)\)</td>
+            <td>\(O(K d^2)\)</td>
+        </tr>
+        <tr>
+            <td>SSM</td>
+            <td>\(O(L d N)\)</td>
+            <td>\(O(dN)\)</td>
+        </tr>
+    </table>
+
+    <h3>10.6 Stability Analysis</h3>
+    <p>
+        For a self-modifying module with linear update rule:
+    </p>
+    <div class="math-display">
+        \[\theta_{t+1} = A\theta_t + Bx_t\]
+    </div>
+    <p>
+        Stability requires all eigenvalues of \(A\) to have magnitude less than 1:
+    </p>
+    <div class="math-display">
+        \[\rho(A) = \max_i |\lambda_i(A)| &lt; 1\]
+    </div>
+    <p>
+        For nonlinear updates, local stability is determined by the Jacobian \(\nabla_\theta U_\phi(\theta, x)\).
+    </p>
+
+    <h2 id="references">11. References</h2>
     <ol>
         <li>
             Google DeepMind. (2025). 
@@ -334,7 +1139,7 @@
         </li>
         <li>
             Schmidhuber, J. (1992). 
-            <em>Learning to Control Fast-Weight Memories.</em> Neural Computation.
+            <em>Learning to Control Fast-Weight Memories: An Alternative to Dynamic Recurrent Networks.</em> Neural Computation.
         </li>
         <li>
             Hochreiter, S., Younger, A. S., & Conwell, P. R. (2001). 
@@ -353,6 +1158,35 @@
             Irie, K., Schlag, I., Csordás, R., & Schmidhuber, J. (2022). 
             <em>A Modern Self-Referential Weight Matrix That Learns to Modify Itself.</em> ICML.
             <a href="https://arxiv.org/abs/2202.05780">[arXiv]</a>
+        </li>
+        <li>
+            Nichol, A., Achiam, J., & Schulman, J. (2018). 
+            <em>On First-Order Meta-Learning Algorithms.</em> arXiv.
+            <a href="https://arxiv.org/abs/1803.02999">[arXiv]</a>
+        </li>
+        <li>
+            Li, Z., Zhou, F., Chen, F., & Li, H. (2017). 
+            <em>Meta-SGD: Learning to Learn Quickly for Few-Shot Learning.</em> arXiv.
+            <a href="https://arxiv.org/abs/1707.09835">[arXiv]</a>
+        </li>
+        <li>
+            Ramsauer, H., et al. (2021). 
+            <em>Hopfield Networks is All You Need.</em> ICLR.
+            <a href="https://arxiv.org/abs/2008.02217">[arXiv]</a>
+        </li>
+        <li>
+            Gu, A., & Dao, T. (2023). 
+            <em>Mamba: Linear-Time Sequence Modeling with Selective State Spaces.</em>
+            <a href="https://arxiv.org/abs/2312.00752">[arXiv]</a>
+        </li>
+        <li>
+            Vaswani, A., et al. (2017). 
+            <em>Attention Is All You Need.</em> NeurIPS.
+            <a href="https://arxiv.org/abs/1706.03762">[arXiv]</a>
+        </li>
+        <li>
+            Hochreiter, S., & Schmidhuber, J. (1997). 
+            <em>Long Short-Term Memory.</em> Neural Computation.
         </li>
     </ol>
 
