@@ -138,9 +138,9 @@
     <h3>3.2 Absorbing Transition</h3>
     <div class="math-display">
         \[Q_t[i,j] = \begin{cases}
-            1 - \beta_t & i = j \neq [MASK] \\
-            \beta_t & j = [MASK] \\
-            1 & i = j = [MASK] \\
+            1 - \beta_t & \text{if } i = j \neq [\text{MASK}] \\
+            \beta_t & \text{if } j = [\text{MASK}] \\
+            1 & \text{if } i = j = [\text{MASK}] \\
             0 & \text{otherwise}
         \end{cases}\]
     </div>
@@ -184,7 +184,7 @@
             The forward process is pure absorbing diffusion into [MASK]. At time \(t\), each 
             token is independently masked with probability \(1 - \bar{\alpha}_t\):
         </p>
-        \[q(x_t | x_0) = \bar{\alpha}_t \cdot x_0 + (1 - \bar{\alpha}_t) \cdot e_{[MASK]}\]
+        \[q(x_t | x_0) = \bar{\alpha}_t \cdot x_0 + (1 - \bar{\alpha}_t) \cdot e_{\text{[MASK]}}\]
     </div>
 
     <h3>4.1 Connection to BERT</h3>
