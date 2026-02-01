@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>State Space Models and Mamba: A Theoretical Introduction - Fukang Wen</title>
+    <meta name="description" content="A theoretical introduction to State Space Models, S4, and Mamba.">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700;900&family=STIX+Two+Math&display=swap" rel="stylesheet">
+    
+    <!-- MathJax -->
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Lato', Georgia, serif; font-size: 17px; line-height: 1.8; color: #333; background-color: #fff; max-width: 780px; margin: 0 auto; padding: 40px 20px; }
+        a { color: #1772d0; text-decoration: none; }
+        a:hover { color: #f09228; }
+        .back-link { display: inline-block; margin-bottom: 30px; font-size: 14px; }
+        h1 { font-size: 32px; font-weight: 900; margin-bottom: 10px; line-height: 1.3; }
+        .meta { color: #666; font-size: 15px; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 1px solid #eee; }
+        h2 { font-size: 24px; font-weight: 700; margin-top: 40px; margin-bottom: 15px; color: #1772d0; }
+        h3 { font-size: 20px; font-weight: 700; margin-top: 30px; margin-bottom: 10px; }
+        p { margin-bottom: 18px; text-align: justify; }
+        .highlight-box { background: #f8f9fa; border-left: 4px solid #1772d0; padding: 20px; margin: 25px 0; border-radius: 0 5px 5px 0; }
+        .highlight-box.definition { border-left-color: #28a745; background: #f0fff4; }
+        .highlight-box.theorem { border-left-color: #dc3545; background: #fff5f5; }
+        .highlight-box.example { border-left-color: #ffc107; background: #fffbf0; }
+        .highlight-box-title { font-weight: 700; margin-bottom: 10px; color: #333; }
+        .highlight-box p:last-child { margin-bottom: 0; }
+        .math-display { background: #f8f9fa; padding: 15px 20px; margin: 15px 0; border-radius: 5px; overflow-x: auto; }
+        ul, ol { margin: 15px 0 15px 30px; }
+        li { margin-bottom: 8px; }
+        table { width: 100%; border-collapse: collapse; margin: 25px 0; font-size: 15px; }
+        th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #dee2e6; }
+        th { background: #f8f9fa; font-weight: 700; }
+        .toc { background: #f8f9fa; padding: 20px 30px; border-radius: 5px; margin-bottom: 30px; }
+        .toc-title { font-weight: 700; margin-bottom: 10px; }
+        .toc ul { list-style: none; margin: 0; }
+        .toc li { margin-bottom: 5px; }
+        .toc a { color: #555; }
+        .toc a:hover { color: #1772d0; }
+        footer { margin-top: 60px; padding-top: 20px; border-top: 1px solid #eee; font-size: 14px; color: #999; text-align: center; }
+    </style>
+</head>
+<body>
+    <a href="./" class="back-link">← Back to Notes</a>
+    
+    <h1>State Space Models and Mamba</h1>
+    <div class="meta">
+        <strong>Fukang Wen</strong> &middot; February 2026 &middot; 
+        <span>Tags: sequence modeling, SSM, Mamba, S4, linear attention</span>
+    </div>
+
+    <div class="toc">
+        <div class="toc-title">Table of Contents</div>
+        <ul>
+            <li><a href="#intro">1. Introduction</a></li>
+            <li><a href="#ssm">2. State Space Models</a></li>
+            <li><a href="#discretization">3. Discretization</a></li>
+            <li><a href="#hippo">4. HiPPO Matrices</a></li>
+            <li><a href="#s4">5. S4 Architecture</a></li>
+            <li><a href="#mamba">6. Mamba: Selective SSM</a></li>
+            <li><a href="#mamba2">7. Mamba-2 and SSD</a></li>
+            <li><a href="#connections">8. Connections to Other Models</a></li>
+            <li><a href="#references">References</a></li>
+        </ul>
+    </div>
+
+    <h2 id="intro">1. Introduction</h2>
+    <p>
+        <strong>State Space Models (SSMs)</strong> offer a compelling alternative to Transformers for sequence 
+        modeling. While Transformers achieve state-of-the-art performance, their quadratic attention complexity 
+        \(O(L^2)\) becomes prohibitive for long sequences. SSMs promise <em>linear</em> complexity \(O(L)\) while 
+        maintaining strong performance.
+    </p>
+
+    <div class="highlight-box">
+        <div class="highlight-box-title">Key Advantage</div>
+        <p>
+            SSMs can be computed as either a recurrence (for autoregressive generation) or a convolution 
+            (for parallel training). This dual view enables efficient training <em>and</em> efficient inference.
+        </p>
+    </div>
+
+    <p>
+        This note traces the evolution from classical SSMs through S4 to Mamba, focusing on the theoretical 
+        foundations that enable their success.
+    </p>
+
+    <h2 id="ssm">2. State Space Models</h2>
+
+    <h3>2.1 Continuous-Time Formulation</h3>
+    <p>
+        A linear time-invariant (LTI) state space model is defined by:
+    </p>
+
+    <div class="highlight-box definition">
+        <div class="highlight-box-title">Definition: Continuous SSM</div>
+        \[\frac{dh(t)}{dt} = Ah(t) + Bu(t)\]
+        \[y(t) = Ch(t) + Du(t)\]
+        <p>
+            where \(h(t) \in \mathbb{R}^N\) is the hidden state, \(u(t) \in \mathbb{R}\) is the input, 
+            \(y(t) \in \mathbb{R}\) is the output, and \(A \in \mathbb{R}^{N \times N}\), 
+            \(B \in \mathbb{R}^{N \times 1}\), \(C \in \mathbb{R}^{1 \times N}\), \(D \in \mathbb{R}\) are parameters.
+        </p>
+    </div>
+
+    <h3>2.2 Solution via Matrix Exponential</h3>
+    <p>
+        The solution to the ODE is:
+    </p>
+    <div class="math-display">
+        \[h(t) = e^{At}h(0) + \int_0^t e^{A(t-\tau)}Bu(\tau)d\tau\]
+    </div>
+    <p>
+        This shows that the state \(h(t)\) is a linear combination of the input history, weighted by 
+        the matrix exponential \(e^{A(t-\tau)}\).
+    </p>
+
+    <h2 id="discretization">3. Discretization</h2>
+
+    <p>
+        To apply SSMs to discrete sequences, we discretize with step size \(\Delta\):
+    </p>
+
+    <div class="highlight-box definition">
+        <div class="highlight-box-title">Definition: Zero-Order Hold (ZOH) Discretization</div>
+        <p>Assuming the input is constant over each interval:</p>
+        \[\bar{A} = e^{\Delta A}\]
+        \[\bar{B} = (\Delta A)^{-1}(e^{\Delta A} - I) \cdot \Delta B\]
+        <p>
+            The discrete recurrence becomes: \(h_k = \bar{A}h_{k-1} + \bar{B}u_k\)
+        </p>
+    </div>
+
+    <h3>3.1 Bilinear Transform</h3>
+    <p>
+        An alternative discretization that preserves stability:
+    </p>
+    <div class="math-display">
+        \[\bar{A} = (I - \Delta A/2)^{-1}(I + \Delta A/2)\]
+        \[\bar{B} = (I - \Delta A/2)^{-1}\Delta B\]
+    </div>
+
+    <h3>3.2 Convolution View</h3>
+    <p>
+        The discretized SSM can be computed as a convolution:
+    </p>
+    <div class="math-display">
+        \[y = K * u \quad \text{where} \quad K = (C\bar{B}, C\bar{A}\bar{B}, C\bar{A}^2\bar{B}, \ldots)\]
+    </div>
+    <p>
+        This kernel \(K\) can be precomputed and applied via FFT for \(O(L \log L)\) training.
+    </p>
+
+    <h2 id="hippo">4. HiPPO Matrices</h2>
+
+    <p>
+        The choice of matrix \(A\) is crucial. <strong>HiPPO</strong> (High-order Polynomial Projection Operators) 
+        provides principled constructions:
+    </p>
+
+    <div class="highlight-box theorem">
+        <div class="highlight-box-title">Theorem: HiPPO-LegS</div>
+        <p>
+            For the Legendre measure (uniform weighting of history), the optimal \(A\) matrix is:
+        </p>
+        \[A_{nk} = -\begin{cases}
+            (2n+1)^{1/2}(2k+1)^{1/2} & \text{if } n > k \\
+            n+1 & \text{if } n = k \\
+            0 & \text{if } n < k
+        \end{cases}\]
+        <p>
+            This matrix projects the input history onto Legendre polynomial coefficients.
+        </p>
+    </div>
+
+    <p>
+        HiPPO matrices have the remarkable property that the hidden state \(h(t)\) optimally compresses 
+        the entire input history \(u(\tau)\) for \(\tau \leq t\).
+    </p>
+
+    <h2 id="s4">5. S4 Architecture</h2>
+
+    <p>
+        <strong>S4</strong> (Structured State Space Sequence model) makes SSMs practical by addressing 
+        computational challenges:
+    </p>
+
+    <h3>5.1 Diagonal Plus Low-Rank</h3>
+    <p>
+        Computing \(e^{\Delta A}\) is expensive for dense \(A\). S4 parameterizes:
+    </p>
+    <div class="math-display">
+        \[A = \Lambda - PQ^*\]
+    </div>
+    <p>
+        where \(\Lambda\) is diagonal. This enables efficient computation via the Woodbury identity.
+    </p>
+
+    <h3>5.2 S4D: Diagonal SSM</h3>
+    <p>
+        A simplified variant uses purely diagonal \(A\):
+    </p>
+    <div class="math-display">
+        \[A = \text{diag}(a_1, a_2, \ldots, a_N)\]
+    </div>
+    <p>
+        This reduces to \(N\) independent scalar SSMs, enabling trivial parallelization.
+    </p>
+
+    <h2 id="mamba">6. Mamba: Selective SSM</h2>
+
+    <p>
+        <strong>Mamba</strong> introduces <em>selectivity</em>: the parameters \(B\), \(C\), and \(\Delta\) 
+        become input-dependent:
+    </p>
+
+    <div class="highlight-box definition">
+        <div class="highlight-box-title">Definition: Selective SSM</div>
+        \[B_t = \text{Linear}_B(x_t)\]
+        \[C_t = \text{Linear}_C(x_t)\]
+        \[\Delta_t = \text{softplus}(\text{Linear}_\Delta(x_t))\]
+        <p>
+            The model can now <em>selectively</em> remember or forget based on the input content.
+        </p>
+    </div>
+
+    <h3>6.1 Why Selectivity Matters</h3>
+    <p>
+        Consider the task: "copy the token after 'KEY'". A time-invariant SSM cannot solve this—it treats 
+        all positions equally. Selectivity allows the model to:
+    </p>
+    <ul>
+        <li>Increase \(\Delta\) (open the gate) when seeing important tokens</li>
+        <li>Decrease \(\Delta\) (close the gate) to ignore irrelevant tokens</li>
+    </ul>
+
+    <h3>6.2 Hardware-Aware Algorithm</h3>
+    <p>
+        Selectivity breaks the convolution view (parameters change per position). Mamba uses a 
+        <strong>parallel scan</strong> algorithm that achieves:
+    </p>
+    <ul>
+        <li>\(O(L)\) time complexity</li>
+        <li>Efficient GPU memory access patterns</li>
+        <li>Kernel fusion to minimize memory I/O</li>
+    </ul>
+
+    <h2 id="mamba2">7. Mamba-2 and SSD</h2>
+
+    <p>
+        <strong>Mamba-2</strong> reveals a deep connection between SSMs and attention:
+    </p>
+
+    <div class="highlight-box theorem">
+        <div class="highlight-box-title">Theorem: SSM-Attention Duality</div>
+        <p>
+            A selective SSM with scalar state and \(\Delta_t = 1\) is equivalent to linear attention 
+            with a causal mask. The hidden state corresponds to the cumulative key-value product.
+        </p>
+    </div>
+
+    <h3>7.1 State Space Duality (SSD)</h3>
+    <p>
+        SSD provides two equivalent views:
+    </p>
+    <table>
+        <tr>
+            <th>SSM View</th>
+            <th>Attention View</th>
+        </tr>
+        <tr>
+            <td>Recurrence: \(h_t = Ah_{t-1} + Bx_t\)</td>
+            <td>Matrix: \(Y = (L \odot QK^\top)V\)</td>
+        </tr>
+        <tr>
+            <td>Sequential, constant memory</td>
+            <td>Parallel, quadratic memory</td>
+        </tr>
+    </table>
+
+    <h3>7.2 Block-wise Algorithm</h3>
+    <p>
+        Mamba-2 chunks the sequence and uses the attention view within blocks, SSM view across blocks. 
+        This achieves both parallelism and linear memory.
+    </p>
+
+    <h2 id="connections">8. Connections to Other Models</h2>
+
+    <h3>8.1 Relation to RNNs</h3>
+    <p>
+        SSMs are linear RNNs with structured state transitions. Unlike vanilla RNNs, the continuous-time 
+        parameterization ensures stability and enables principled initialization (HiPPO).
+    </p>
+
+    <h3>8.2 Relation to Attention</h3>
+    <p>
+        Mamba-2 shows SSMs and linear attention are mathematically equivalent. Standard softmax attention 
+        can be viewed as an SSM with infinite state dimension.
+    </p>
+
+    <h3>8.3 Relation to Convolutions</h3>
+    <p>
+        Time-invariant SSMs are global convolutions with structured kernels. The HiPPO framework provides 
+        a principled way to design these kernels for long-range dependencies.
+    </p>
+
+    <h2 id="references">References</h2>
+    <ol>
+        <li>
+            Gu, A., Goel, K., & Ré, C. (2022). 
+            <em>Efficiently Modeling Long Sequences with Structured State Spaces.</em> ICLR.
+            <a href="https://arxiv.org/abs/2111.00396">[arXiv]</a>
+        </li>
+        <li>
+            Gu, A., & Dao, T. (2023). 
+            <em>Mamba: Linear-Time Sequence Modeling with Selective State Spaces.</em>
+            <a href="https://arxiv.org/abs/2312.00752">[arXiv]</a>
+        </li>
+        <li>
+            Dao, T., & Gu, A. (2024). 
+            <em>Transformers are SSMs: Generalized Models and Efficient Algorithms Through Structured State Space Duality.</em>
+            <a href="https://arxiv.org/abs/2405.21060">[arXiv]</a>
+        </li>
+        <li>
+            Gu, A., Dao, T., Ermon, S., Rudra, A., & Ré, C. (2020). 
+            <em>HiPPO: Recurrent Memory with Optimal Polynomial Projections.</em> NeurIPS.
+            <a href="https://arxiv.org/abs/2008.07669">[arXiv]</a>
+        </li>
+        <li>
+            Gu, A., Gupta, A., Goel, K., & Ré, C. (2022). 
+            <em>On the Parameterization and Initialization of Diagonal State Space Models.</em> NeurIPS.
+            <a href="https://arxiv.org/abs/2206.11893">[arXiv]</a>
+        </li>
+        <li>
+            Smith, J., Warrington, A., & Linderman, S. (2023). 
+            <em>Simplified State Space Layers for Sequence Modeling.</em> ICLR.
+            <a href="https://arxiv.org/abs/2208.04933">[arXiv]</a>
+        </li>
+        <li>
+            Poli, M., et al. (2023). 
+            <em>Hyena Hierarchy: Towards Larger Convolutional Language Models.</em> ICML.
+            <a href="https://arxiv.org/abs/2302.10866">[arXiv]</a>
+        </li>
+        <li>
+            Fu, D., et al. (2023). 
+            <em>Hungry Hungry Hippos: Towards Language Modeling with State Space Models.</em> ICLR.
+            <a href="https://arxiv.org/abs/2212.14052">[arXiv]</a>
+        </li>
+        <li>
+            Katharopoulos, A., et al. (2020). 
+            <em>Transformers are RNNs: Fast Autoregressive Transformers with Linear Attention.</em> ICML.
+            <a href="https://arxiv.org/abs/2006.16236">[arXiv]</a>
+        </li>
+        <li>
+            Blelloch, G. (1990). 
+            <em>Prefix Sums and Their Applications.</em> CMU Technical Report.
+        </li>
+    </ol>
+
+    <footer>
+        <a href="./">← Back to Notes</a> &middot; Last updated: February 2026
+    </footer>
+</body>
+</html>

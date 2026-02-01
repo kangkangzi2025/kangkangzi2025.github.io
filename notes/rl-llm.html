@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reinforcement Learning for LLMs: A Theoretical Introduction - Fukang Wen</title>
+    <meta name="description" content="A theoretical introduction to RL algorithms for training reasoning models: PPO, GRPO, DAPO, SDPO.">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700;900&family=STIX+Two+Math&display=swap" rel="stylesheet">
+    
+    <!-- MathJax -->
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Lato', Georgia, serif; font-size: 17px; line-height: 1.8; color: #333; background-color: #fff; max-width: 780px; margin: 0 auto; padding: 40px 20px; }
+        a { color: #1772d0; text-decoration: none; }
+        a:hover { color: #f09228; }
+        .back-link { display: inline-block; margin-bottom: 30px; font-size: 14px; }
+        h1 { font-size: 32px; font-weight: 900; margin-bottom: 10px; line-height: 1.3; }
+        .meta { color: #666; font-size: 15px; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 1px solid #eee; }
+        h2 { font-size: 24px; font-weight: 700; margin-top: 40px; margin-bottom: 15px; color: #1772d0; }
+        h3 { font-size: 20px; font-weight: 700; margin-top: 30px; margin-bottom: 10px; }
+        p { margin-bottom: 18px; text-align: justify; }
+        .highlight-box { background: #f8f9fa; border-left: 4px solid #1772d0; padding: 20px; margin: 25px 0; border-radius: 0 5px 5px 0; }
+        .highlight-box.definition { border-left-color: #28a745; background: #f0fff4; }
+        .highlight-box.theorem { border-left-color: #dc3545; background: #fff5f5; }
+        .highlight-box.example { border-left-color: #ffc107; background: #fffbf0; }
+        .highlight-box-title { font-weight: 700; margin-bottom: 10px; color: #333; }
+        .highlight-box p:last-child { margin-bottom: 0; }
+        .math-display { background: #f8f9fa; padding: 15px 20px; margin: 15px 0; border-radius: 5px; overflow-x: auto; }
+        ul, ol { margin: 15px 0 15px 30px; }
+        li { margin-bottom: 8px; }
+        table { width: 100%; border-collapse: collapse; margin: 25px 0; font-size: 15px; }
+        th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #dee2e6; }
+        th { background: #f8f9fa; font-weight: 700; }
+        .toc { background: #f8f9fa; padding: 20px 30px; border-radius: 5px; margin-bottom: 30px; }
+        .toc-title { font-weight: 700; margin-bottom: 10px; }
+        .toc ul { list-style: none; margin: 0; }
+        .toc li { margin-bottom: 5px; }
+        .toc a { color: #555; }
+        .toc a:hover { color: #1772d0; }
+        footer { margin-top: 60px; padding-top: 20px; border-top: 1px solid #eee; font-size: 14px; color: #999; text-align: center; }
+    </style>
+</head>
+<body>
+    <a href="./" class="back-link">← Back to Notes</a>
+    
+    <h1>Reinforcement Learning for LLMs</h1>
+    <div class="meta">
+        <strong>Fukang Wen</strong> &middot; February 2026 &middot; 
+        <span>Tags: RLHF, PPO, GRPO, DAPO, reasoning models</span>
+    </div>
+
+    <div class="toc">
+        <div class="toc-title">Table of Contents</div>
+        <ul>
+            <li><a href="#intro">1. Introduction</a></li>
+            <li><a href="#policy-gradient">2. Policy Gradient Methods</a></li>
+            <li><a href="#ppo">3. PPO</a></li>
+            <li><a href="#grpo">4. GRPO</a></li>
+            <li><a href="#drgrpo">5. Dr.GRPO and Length Bias</a></li>
+            <li><a href="#dapo">6. DAPO</a></li>
+            <li><a href="#sdpo">7. SDPO</a></li>
+            <li><a href="#connections">8. Connections and Discussion</a></li>
+            <li><a href="#references">References</a></li>
+        </ul>
+    </div>
+
+    <h2 id="intro">1. Introduction</h2>
+    <p>
+        The emergence of reasoning models like OpenAI o1 and DeepSeek-R1 has renewed interest in 
+        <strong>reinforcement learning for LLMs</strong>. Unlike supervised fine-tuning, RL enables 
+        models to learn from sparse rewards—a natural fit for tasks where we can verify correctness 
+        (math, code) but cannot easily demonstrate the solution process.
+    </p>
+
+    <div class="highlight-box">
+        <div class="highlight-box-title">Algorithm Evolution</div>
+        <p>
+            PPO (2017) → GRPO (2024) → Dr.GRPO (2025) → DAPO (2025) → SDPO (2026)
+        </p>
+        <p>
+            Each step addresses limitations of its predecessor: memory efficiency, length bias, 
+            exploration-exploitation balance, and sample efficiency.
+        </p>
+    </div>
+
+    <h2 id="policy-gradient">2. Policy Gradient Methods</h2>
+
+    <h3>2.1 The Objective</h3>
+    <p>
+        We want to maximize expected reward:
+    </p>
+    <div class="math-display">
+        \[J(\theta) = \mathbb{E}_{\tau \sim \pi_\theta}[R(\tau)]\]
+    </div>
+    <p>
+        where \(\tau = (s_0, a_0, s_1, a_1, \ldots)\) is a trajectory and \(R(\tau)\) is the total reward.
+    </p>
+
+    <div class="highlight-box theorem">
+        <div class="highlight-box-title">Theorem: Policy Gradient</div>
+        \[\nabla_\theta J(\theta) = \mathbb{E}_{\tau \sim \pi_\theta}\left[\sum_{t=0}^T \nabla_\theta \log \pi_\theta(a_t|s_t) \cdot A(s_t, a_t)\right]\]
+        <p>
+            where \(A(s_t, a_t) = Q(s_t, a_t) - V(s_t)\) is the <em>advantage function</em>.
+        </p>
+    </div>
+
+    <h3>2.2 REINFORCE</h3>
+    <p>
+        The simplest instantiation uses the return-to-go as an estimate:
+    </p>
+    <div class="math-display">
+        \[\nabla_\theta J \approx \frac{1}{N}\sum_{i=1}^N \sum_{t=0}^T \nabla_\theta \log \pi_\theta(a_t^i|s_t^i) \cdot G_t^i\]
+    </div>
+    <p>
+        where \(G_t = \sum_{k=t}^T \gamma^{k-t} r_k\) is the discounted return.
+    </p>
+
+    <h3>2.3 Generalized Advantage Estimation (GAE)</h3>
+    <p>
+        GAE interpolates between high-bias (TD) and high-variance (Monte Carlo) estimates:
+    </p>
+    <div class="math-display">
+        \[A_t^{GAE} = \sum_{l=0}^{\infty} (\gamma \lambda)^l \delta_{t+l}\]
+    </div>
+    <p>
+        where \(\delta_t = r_t + \gamma V(s_{t+1}) - V(s_t)\) is the TD error. The parameter 
+        \(\lambda \in [0,1]\) controls the bias-variance tradeoff.
+    </p>
+
+    <h2 id="ppo">3. PPO</h2>
+
+    <p>
+        <strong>Proximal Policy Optimization</strong> constrains policy updates to stay close to the 
+        current policy, preventing destructive large updates.
+    </p>
+
+    <div class="highlight-box definition">
+        <div class="highlight-box-title">Definition: PPO Clipped Objective</div>
+        \[L^{CLIP}(\theta) = \mathbb{E}\left[\min\left(r_t(\theta) A_t, \text{clip}(r_t(\theta), 1-\epsilon, 1+\epsilon) A_t\right)\right]\]
+        <p>where the probability ratio is:</p>
+        \[r_t(\theta) = \frac{\pi_\theta(a_t|s_t)}{\pi_{\theta_{old}}(a_t|s_t)}\]
+    </div>
+
+    <h3>3.1 Why Clipping Works</h3>
+    <p>
+        The \(\min\) operator creates a pessimistic bound:
+    </p>
+    <ul>
+        <li>When \(A_t > 0\): caps the objective if \(r_t > 1 + \epsilon\) (prevents overconfidence)</li>
+        <li>When \(A_t < 0\): caps the objective if \(r_t < 1 - \epsilon\) (prevents overcorrection)</li>
+    </ul>
+
+    <h3>3.2 Value Network</h3>
+    <p>
+        PPO trains a <strong>critic network</strong> \(V_\phi(s)\) alongside the policy to estimate 
+        advantages. For LLMs, this critic is typically the same size as the policy—doubling memory requirements.
+    </p>
+
+    <h2 id="grpo">4. GRPO</h2>
+
+    <p>
+        <strong>Group Relative Policy Optimization</strong> (DeepSeek, 2024) eliminates the value network 
+        by using the <em>group mean</em> as a baseline.
+    </p>
+
+    <div class="highlight-box definition">
+        <div class="highlight-box-title">Definition: GRPO Advantage</div>
+        <p>Given \(G\) responses \(\{y_1, \ldots, y_G\}\) to the same prompt \(x\):</p>
+        \[A_i = r_i - \frac{1}{G}\sum_{j=1}^G r_j\]
+        <p>No value network needed—the group mean serves as an implicit baseline.</p>
+    </div>
+
+    <h3>4.1 Memory Efficiency</h3>
+    <p>
+        For a 7B model, the value network alone requires ~14GB of memory (7B × 2 bytes in bf16). 
+        GRPO saves this entirely, enabling training of larger models on the same hardware.
+    </p>
+
+    <h3>4.2 The GRPO Loss</h3>
+    <div class="math-display">
+        \[L^{GRPO}(\theta) = -\mathbb{E}\left[\frac{1}{G}\sum_{i=1}^G \min\left(r_i A_i, \text{clip}(r_i, 1-\epsilon, 1+\epsilon) A_i\right)\right]\]
+    </div>
+
+    <h2 id="drgrpo">5. Dr.GRPO and Length Bias</h2>
+
+    <h3>5.1 The Length Bias Problem</h3>
+    <p>
+        GRPO has a subtle flaw: it implicitly favors <em>longer</em> responses. The policy gradient 
+        sums log-probabilities over all tokens:
+    </p>
+    <div class="math-display">
+        \[\log \pi_\theta(y|x) = \sum_{t=1}^T \log \pi_\theta(y_t|x, y_{<t})\]
+    </div>
+    <p>
+        Longer sequences have more terms, hence more negative values. This creates a bias toward length.
+    </p>
+
+    <div class="highlight-box example">
+        <div class="highlight-box-title">Example: Length Bias</div>
+        <p>
+            Consider two responses with equal per-token probability 0.9:
+        </p>
+        <ul>
+            <li>Short (10 tokens): \(\log \pi = 10 \times \log(0.9) \approx -1.05\)</li>
+            <li>Long (100 tokens): \(\log \pi = 100 \times \log(0.9) \approx -10.5\)</li>
+        </ul>
+        <p>The long response gets 10× higher gradient magnitude, regardless of quality.</p>
+    </div>
+
+    <h3>5.2 Dr.GRPO Solution</h3>
+    <p>
+        <strong>Dr.GRPO</strong> (Sea AI, 2025) normalizes per-token:
+    </p>
+    <div class="math-display">
+        \[L = \frac{1}{T}\sum_{t=1}^T \log \pi_\theta(y_t|x, y_{<t}) \cdot A\]
+    </div>
+
+    <h2 id="dapo">6. DAPO</h2>
+
+    <p>
+        <strong>Decoupled Alignment from Policy Optimization</strong> (ByteDance, 2025) addresses 
+        exploration collapse through four key techniques:
+    </p>
+
+    <h3>6.1 Clip-Higher: Decoupled Clipping</h3>
+    <p>
+        Standard PPO uses the same \(\epsilon\) for both positive and negative advantages. DAPO uses:
+    </p>
+    <div class="math-display">
+        \[\text{clip}(r, 1-\epsilon_{low}, 1+\epsilon_{high})\]
+    </div>
+    <p>
+        with \(\epsilon_{high} > \epsilon_{low}\). This allows faster exploitation of good actions 
+        while preventing excessive negative updates.
+    </p>
+
+    <h3>6.2 Dynamic Sampling</h3>
+    <p>
+        Only include samples where the policy could have generated them (not too far from current policy):
+    </p>
+    <div class="math-display">
+        \[\mathcal{D}_{filtered} = \{(x, y) : |\log \pi_\theta(y|x) - \log \pi_{old}(y|x)| < \delta\}\]
+    </div>
+
+    <h3>6.3 Token-Level Loss</h3>
+    <p>
+        Apply the Dr.GRPO fix for length bias.
+    </p>
+
+    <h3>6.4 Overlong Filtering</h3>
+    <p>
+        Discard responses that hit the length limit, as they likely represent incomplete reasoning.
+    </p>
+
+    <h2 id="sdpo">7. SDPO</h2>
+
+    <p>
+        <strong>Self-Distillation from Feedback</strong> (2026) achieves 3× sample efficiency by 
+        learning from <em>textual feedback</em>:
+    </p>
+
+    <div class="highlight-box definition">
+        <div class="highlight-box-title">Definition: SDPO Objective</div>
+        <p>Given a response \(y\) with feedback \(f\) (e.g., error messages, hints):</p>
+        \[L^{SDPO} = -\mathbb{E}_{y^+ \sim \pi_\theta(\cdot|x,f)}\left[\log \pi_\theta(y^+|x)\right]\]
+        <p>
+            The policy conditioned on feedback acts as a <em>teacher</em>, distilling knowledge 
+            back into the unconditional policy.
+        </p>
+    </div>
+
+    <h3>7.1 Why This Works</h3>
+    <p>
+        When the model fails, we often get useful information: compiler errors, test failures, 
+        counterexamples. SDPO uses this feedback as a bridge—the model generates a corrected 
+        response given the feedback, then distills this into the base policy.
+    </p>
+
+    <h2 id="connections">8. Connections and Discussion</h2>
+
+    <h3>8.1 Outcome vs. Process Supervision</h3>
+    <table>
+        <tr>
+            <th>Supervision</th>
+            <th>Signal</th>
+            <th>Density</th>
+        </tr>
+        <tr>
+            <td>Outcome (ORM)</td>
+            <td>Final answer correct?</td>
+            <td>Sparse</td>
+        </tr>
+        <tr>
+            <td>Process (PRM)</td>
+            <td>Each step correct?</td>
+            <td>Dense</td>
+        </tr>
+    </table>
+    <p>
+        GRPO/DAPO use outcome supervision. Recent work explores dense process rewards for 
+        better credit assignment.
+    </p>
+
+    <h3>8.2 Scaling Laws for RL</h3>
+    <p>
+        DeepSeek-R1 showed that RL can continue to improve models even after SFT saturates, 
+        especially for reasoning tasks with verifiable rewards.
+    </p>
+
+    <h2 id="references">References</h2>
+    <ol>
+        <li>
+            Schulman, J., et al. (2017). 
+            <em>Proximal Policy Optimization Algorithms.</em>
+            <a href="https://arxiv.org/abs/1707.06347">[arXiv]</a>
+        </li>
+        <li>
+            Shao, Z., et al. (2024). 
+            <em>DeepSeekMath: Pushing the Limits of Mathematical Reasoning in Open Language Models.</em>
+            <a href="https://arxiv.org/abs/2402.03300">[arXiv]</a>
+        </li>
+        <li>
+            DeepSeek-AI. (2025). 
+            <em>DeepSeek-R1: Incentivizing Reasoning Capability in LLMs via Reinforcement Learning.</em>
+            <a href="https://arxiv.org/abs/2501.12948">[arXiv]</a>
+        </li>
+        <li>
+            Liu, Z., et al. (2025). 
+            <em>Understanding R1-Zero-Like Training: A Critical Perspective.</em>
+            <a href="https://arxiv.org/abs/2503.20783">[arXiv]</a>
+        </li>
+        <li>
+            Yu, Q., et al. (2025). 
+            <em>DAPO: An Open-Source LLM Reinforcement Learning System at Scale.</em>
+            <a href="https://arxiv.org/abs/2503.14476">[arXiv]</a>
+        </li>
+        <li>
+            Schulman, J., et al. (2016). 
+            <em>High-Dimensional Continuous Control Using Generalized Advantage Estimation.</em> ICLR.
+            <a href="https://arxiv.org/abs/1506.02438">[arXiv]</a>
+        </li>
+        <li>
+            Ouyang, L., et al. (2022). 
+            <em>Training Language Models to Follow Instructions with Human Feedback.</em> NeurIPS.
+            <a href="https://arxiv.org/abs/2203.02155">[arXiv]</a>
+        </li>
+        <li>
+            Rafailov, R., et al. (2023). 
+            <em>Direct Preference Optimization: Your Language Model is Secretly a Reward Model.</em> NeurIPS.
+            <a href="https://arxiv.org/abs/2305.18290">[arXiv]</a>
+        </li>
+        <li>
+            Lightman, H., et al. (2023). 
+            <em>Let's Verify Step by Step.</em>
+            <a href="https://arxiv.org/abs/2305.20050">[arXiv]</a>
+        </li>
+        <li>
+            Williams, R. J. (1992). 
+            <em>Simple Statistical Gradient-Following Algorithms for Connectionist Reinforcement Learning.</em> 
+            Machine Learning.
+        </li>
+    </ol>
+
+    <footer>
+        <a href="./">← Back to Notes</a> &middot; Last updated: February 2026
+    </footer>
+</body>
+</html>

@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Discrete Diffusion Models: A Theoretical Introduction - Fukang Wen</title>
+    <meta name="description" content="A theoretical introduction to diffusion models for discrete data: D3PM, MDLM, SEDD.">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700;900&family=STIX+Two+Math&display=swap" rel="stylesheet">
+    
+    <!-- MathJax -->
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Lato', Georgia, serif; font-size: 17px; line-height: 1.8; color: #333; background-color: #fff; max-width: 780px; margin: 0 auto; padding: 40px 20px; }
+        a { color: #1772d0; text-decoration: none; }
+        a:hover { color: #f09228; }
+        .back-link { display: inline-block; margin-bottom: 30px; font-size: 14px; }
+        h1 { font-size: 32px; font-weight: 900; margin-bottom: 10px; line-height: 1.3; }
+        .meta { color: #666; font-size: 15px; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 1px solid #eee; }
+        h2 { font-size: 24px; font-weight: 700; margin-top: 40px; margin-bottom: 15px; color: #1772d0; }
+        h3 { font-size: 20px; font-weight: 700; margin-top: 30px; margin-bottom: 10px; }
+        p { margin-bottom: 18px; text-align: justify; }
+        .highlight-box { background: #f8f9fa; border-left: 4px solid #1772d0; padding: 20px; margin: 25px 0; border-radius: 0 5px 5px 0; }
+        .highlight-box.definition { border-left-color: #28a745; background: #f0fff4; }
+        .highlight-box.theorem { border-left-color: #dc3545; background: #fff5f5; }
+        .highlight-box.example { border-left-color: #ffc107; background: #fffbf0; }
+        .highlight-box-title { font-weight: 700; margin-bottom: 10px; color: #333; }
+        .highlight-box p:last-child { margin-bottom: 0; }
+        .math-display { background: #f8f9fa; padding: 15px 20px; margin: 15px 0; border-radius: 5px; overflow-x: auto; }
+        ul, ol { margin: 15px 0 15px 30px; }
+        li { margin-bottom: 8px; }
+        table { width: 100%; border-collapse: collapse; margin: 25px 0; font-size: 15px; }
+        th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #dee2e6; }
+        th { background: #f8f9fa; font-weight: 700; }
+        .toc { background: #f8f9fa; padding: 20px 30px; border-radius: 5px; margin-bottom: 30px; }
+        .toc-title { font-weight: 700; margin-bottom: 10px; }
+        .toc ul { list-style: none; margin: 0; }
+        .toc li { margin-bottom: 5px; }
+        .toc a { color: #555; }
+        .toc a:hover { color: #1772d0; }
+        footer { margin-top: 60px; padding-top: 20px; border-top: 1px solid #eee; font-size: 14px; color: #999; text-align: center; }
+    </style>
+</head>
+<body>
+    <a href="./" class="back-link">← Back to Notes</a>
+    
+    <h1>Discrete Diffusion Models</h1>
+    <div class="meta">
+        <strong>Fukang Wen</strong> &middot; February 2026 &middot; 
+        <span>Tags: diffusion, discrete, D3PM, MDLM, SEDD, language models</span>
+    </div>
+
+    <div class="toc">
+        <div class="toc-title">Table of Contents</div>
+        <ul>
+            <li><a href="#intro">1. Introduction</a></li>
+            <li><a href="#transition">2. Transition Matrices</a></li>
+            <li><a href="#d3pm">3. D3PM</a></li>
+            <li><a href="#mdlm">4. MDLM</a></li>
+            <li><a href="#sedd">5. SEDD</a></li>
+            <li><a href="#connections">6. Connections to Continuous Diffusion</a></li>
+            <li><a href="#references">References</a></li>
+        </ul>
+    </div>
+
+    <h2 id="intro">1. Introduction</h2>
+    <p>
+        Standard diffusion models add Gaussian noise to continuous data (images). But much of the 
+        world's data is <strong>discrete</strong>: text, code, molecules, DNA sequences. How do we 
+        apply diffusion to categorical data?
+    </p>
+
+    <div class="highlight-box">
+        <div class="highlight-box-title">Key Challenge</div>
+        <p>
+            We cannot add Gaussian noise to discrete tokens. Instead, we must define a 
+            <em>transition process</em> over discrete states that gradually destroys information.
+        </p>
+    </div>
+
+    <p>
+        This note covers three major approaches: <strong>D3PM</strong> (general transition matrices), 
+        <strong>MDLM</strong> (masking as diffusion), and <strong>SEDD</strong> (score matching for discrete data).
+    </p>
+
+    <h2 id="transition">2. Transition Matrices</h2>
+
+    <h3>2.1 Discrete Forward Process</h3>
+    <p>
+        For a vocabulary of size \(K\), we define the forward process via a transition matrix 
+        \(Q_t \in \mathbb{R}^{K \times K}\):
+    </p>
+
+    <div class="highlight-box definition">
+        <div class="highlight-box-title">Definition: Discrete Forward Process</div>
+        \[q(x_t | x_{t-1}) = \text{Cat}(x_t; p = x_{t-1} Q_t)\]
+        <p>
+            where \(x_t \in \{0,1\}^K\) is a one-hot vector and \(Q_t[i,j]\) is the probability 
+            of transitioning from state \(i\) to state \(j\) at step \(t\).
+        </p>
+    </div>
+
+    <h3>2.2 Cumulative Transition</h3>
+    <p>
+        We can jump directly from \(x_0\) to \(x_t\):
+    </p>
+    <div class="math-display">
+        \[q(x_t | x_0) = \text{Cat}(x_t; p = x_0 \bar{Q}_t) \quad \text{where} \quad \bar{Q}_t = Q_1 Q_2 \cdots Q_t\]
+    </div>
+
+    <h3>2.3 Stationary Distribution</h3>
+    <p>
+        As \(t \to \infty\), the process should converge to a known distribution \(\pi\) (e.g., uniform). 
+        This requires \(\bar{Q}_\infty\) to have all rows equal to \(\pi\).
+    </p>
+
+    <h2 id="d3pm">3. D3PM</h2>
+
+    <p>
+        <strong>Discrete Denoising Diffusion Probabilistic Models</strong> (Austin et al., 2021) 
+        explores different transition matrix designs:
+    </p>
+
+    <h3>3.1 Uniform Transition</h3>
+    <div class="math-display">
+        \[Q_t = (1 - \beta_t) I + \frac{\beta_t}{K} \mathbf{1}\mathbf{1}^\top\]
+    </div>
+    <p>
+        With probability \((1-\beta_t)\), stay in place. Otherwise, jump to a uniformly random state.
+    </p>
+
+    <h3>3.2 Absorbing Transition</h3>
+    <div class="math-display">
+        \[Q_t[i,j] = \begin{cases}
+            1 - \beta_t & i = j \neq [MASK] \\
+            \beta_t & j = [MASK] \\
+            1 & i = j = [MASK] \\
+            0 & \text{otherwise}
+        \end{cases}\]
+    </div>
+    <p>
+        Tokens gradually transition to a special [MASK] state. The stationary distribution is 
+        all [MASK] tokens.
+    </p>
+
+    <h3>3.3 Gaussian Transition (Discretized)</h3>
+    <p>
+        For ordinal data, we can define transitions based on a discretized Gaussian:
+    </p>
+    <div class="math-display">
+        \[Q_t[i,j] \propto \exp\left(-\frac{(i-j)^2}{2\sigma_t^2}\right)\]
+    </div>
+    <p>
+        This is natural for data like pixel values where neighboring states are similar.
+    </p>
+
+    <h3>3.4 D3PM Loss</h3>
+    <p>
+        The ELBO decomposes similarly to DDPM:
+    </p>
+    <div class="math-display">
+        \[L = L_0 + \sum_{t=2}^T L_{t-1} + L_T\]
+    </div>
+    <p>
+        where each \(L_{t-1}\) is a KL divergence between categorical distributions.
+    </p>
+
+    <h2 id="mdlm">4. MDLM</h2>
+
+    <p>
+        <strong>Masked Diffusion Language Models</strong> (Sahoo et al., 2024) reinterprets BERT-style 
+        masking as a diffusion process:
+    </p>
+
+    <div class="highlight-box definition">
+        <div class="highlight-box-title">Definition: Masking as Diffusion</div>
+        <p>
+            The forward process is pure absorbing diffusion into [MASK]. At time \(t\), each 
+            token is independently masked with probability \(1 - \bar{\alpha}_t\):
+        </p>
+        \[q(x_t | x_0) = \bar{\alpha}_t \cdot x_0 + (1 - \bar{\alpha}_t) \cdot e_{[MASK]}\]
+    </div>
+
+    <h3>4.1 Connection to BERT</h3>
+    <p>
+        BERT training = one-step denoising. MDLM = multi-step denoising with a noise schedule. 
+        The key insight is that MLM (masked language modeling) is a special case of discrete diffusion.
+    </p>
+
+    <h3>4.2 Simplified Loss</h3>
+    <p>
+        MDLM uses a simple cross-entropy loss on masked positions:
+    </p>
+    <div class="math-display">
+        \[L = \mathbb{E}_{t, x_0, x_t}\left[-\log p_\theta(x_0 | x_t, t)\right]\]
+    </div>
+
+    <h2 id="sedd">5. SEDD</h2>
+
+    <p>
+        <strong>Score Entropy Discrete Diffusion</strong> (Lou et al., 2024) brings score-matching 
+        ideas to discrete data:
+    </p>
+
+    <h3>5.1 Discrete Score Function</h3>
+    <p>
+        In continuous diffusion, we learn \(\nabla_x \log p(x)\). For discrete data, we define 
+        a <em>concrete score</em>:
+    </p>
+
+    <div class="highlight-box definition">
+        <div class="highlight-box-title">Definition: Discrete Score</div>
+        \[s_\theta(x, t)[i,j] = \log \frac{p_\theta(x^{i \to j}_t | t)}{p_\theta(x_t | t)}\]
+        <p>
+            The score captures the log-ratio of probabilities when we flip token at position \(i\) 
+            from its current value to value \(j\).
+        </p>
+    </div>
+
+    <h3>5.2 Score Entropy Loss</h3>
+    <p>
+        SEDD trains with a score entropy objective that generalizes denoising score matching:
+    </p>
+    <div class="math-display">
+        \[L = \mathbb{E}_{t, x_0, x_t}\left[\sum_j Q_t[x_t, j] \left(s_\theta(x_t, t)[j] - \log Q_t[x_t, j] + \log Q_t[x_0, j]\right)^2\right]\]
+    </div>
+
+    <h3>5.3 Sampling</h3>
+    <p>
+        At each step, compute transition probabilities proportional to the exponentiated score 
+        and sample from this distribution.
+    </p>
+
+    <h2 id="connections">6. Connections to Continuous Diffusion</h2>
+
+    <table>
+        <tr>
+            <th>Concept</th>
+            <th>Continuous</th>
+            <th>Discrete</th>
+        </tr>
+        <tr>
+            <td>Forward process</td>
+            <td>Add Gaussian noise</td>
+            <td>Apply transition matrix</td>
+        </tr>
+        <tr>
+            <td>Stationary dist.</td>
+            <td>\(\mathcal{N}(0, I)\)</td>
+            <td>Uniform / all [MASK]</td>
+        </tr>
+        <tr>
+            <td>Score</td>
+            <td>\(\nabla_x \log p(x)\)</td>
+            <td>Log-ratio for flips</td>
+        </tr>
+        <tr>
+            <td>Reverse step</td>
+            <td>Gaussian + predicted mean</td>
+            <td>Categorical sampling</td>
+        </tr>
+    </table>
+
+    <h3>6.1 Continuous-Time Limit</h3>
+    <p>
+        As the number of steps \(T \to \infty\), discrete diffusion converges to a 
+        <strong>continuous-time Markov chain (CTMC)</strong>. The transition rates are given by 
+        a rate matrix \(R\) where \(R_{ij}\) is the instantaneous probability of jumping from 
+        \(i\) to \(j\).
+    </p>
+
+    <h3>6.2 Guidance</h3>
+    <p>
+        Classifier-free guidance extends naturally to discrete diffusion by interpolating 
+        conditional and unconditional scores:
+    </p>
+    <div class="math-display">
+        \[\tilde{s}(x, t, c) = s(x, t, \varnothing) + w \cdot (s(x, t, c) - s(x, t, \varnothing))\]
+    </div>
+
+    <h2 id="references">References</h2>
+    <ol>
+        <li>
+            Austin, J., et al. (2021). 
+            <em>Structured Denoising Diffusion Models in Discrete State-Spaces.</em> NeurIPS.
+            <a href="https://arxiv.org/abs/2107.03006">[arXiv]</a>
+        </li>
+        <li>
+            Sahoo, S., et al. (2024). 
+            <em>Simple and Effective Masked Diffusion Language Models.</em> NeurIPS.
+            <a href="https://arxiv.org/abs/2406.07524">[arXiv]</a>
+        </li>
+        <li>
+            Lou, A., Meng, C., & Ermon, S. (2024). 
+            <em>Discrete Diffusion Modeling by Estimating the Ratios of the Data Distribution.</em> ICML.
+            <a href="https://arxiv.org/abs/2310.16834">[arXiv]</a>
+        </li>
+        <li>
+            Shi, J., et al. (2024). 
+            <em>Simplified and Generalized Masked Diffusion for Discrete Data.</em> NeurIPS.
+            <a href="https://arxiv.org/abs/2406.04329">[arXiv]</a>
+        </li>
+        <li>
+            Campbell, A., et al. (2022). 
+            <em>A Continuous Time Framework for Discrete Denoising Models.</em> NeurIPS.
+            <a href="https://arxiv.org/abs/2205.14987">[arXiv]</a>
+        </li>
+        <li>
+            Hoogeboom, E., et al. (2021). 
+            <em>Argmax Flows and Multinomial Diffusion: Learning Categorical Distributions.</em> NeurIPS.
+            <a href="https://arxiv.org/abs/2102.05379">[arXiv]</a>
+        </li>
+        <li>
+            Devlin, J., et al. (2019). 
+            <em>BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding.</em> NAACL.
+            <a href="https://arxiv.org/abs/1810.04805">[arXiv]</a>
+        </li>
+        <li>
+            Song, Y., et al. (2021). 
+            <em>Score-Based Generative Modeling through Stochastic Differential Equations.</em> ICLR.
+            <a href="https://arxiv.org/abs/2011.13456">[arXiv]</a>
+        </li>
+        <li>
+            Zheng, K., et al. (2023). 
+            <em>A Reparameterized Discrete Diffusion Model for Text Generation.</em>
+            <a href="https://arxiv.org/abs/2302.05737">[arXiv]</a>
+        </li>
+        <li>
+            Dieleman, S., et al. (2022). 
+            <em>Continuous Diffusion for Categorical Data.</em>
+            <a href="https://arxiv.org/abs/2211.15089">[arXiv]</a>
+        </li>
+    </ol>
+
+    <footer>
+        <a href="./">← Back to Notes</a> &middot; Last updated: February 2026
+    </footer>
+</body>
+</html>
