@@ -196,7 +196,7 @@
         sums log-probabilities over all tokens:
     </p>
     <div class="math-display">
-        \[\log \pi_\theta(y|x) = \sum_{t=1}^T \log \pi_\theta(y_t|x, y_{<t})\]
+        \[\log \pi_\theta(y|x) = \sum_{t=1}^T \log \pi_\theta(y_t|x, y_{&lt;t})\]
     </div>
     <p>
         Longer sequences have more terms, hence more negative values. This creates a bias toward length.
@@ -219,7 +219,7 @@
         <strong>Dr.GRPO</strong> (Sea AI, 2025) normalizes per-token:
     </p>
     <div class="math-display">
-        \[L = \frac{1}{T}\sum_{t=1}^T \log \pi_\theta(y_t|x, y_{<t}) \cdot A\]
+        \[L = \frac{1}{T}\sum_{t=1}^T \log \pi_\theta(y_t|x, y_{&lt;t}) \cdot A\]
     </div>
 
     <h2 id="dapo">6. DAPO</h2>
