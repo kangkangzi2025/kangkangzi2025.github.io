@@ -1,0 +1,739 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Coding agent notes with references, implementation patterns, and long-horizon agent experiments.">
+  <title>Coding Agent Notes - Fukang Wen</title>
+
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.12.0-1/css/all.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&amp;family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=Marcellus+SC&amp;display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --main-color: #a82332;
+      --link-color: #a82332;
+      --shadow-color: #7c1624;
+      --header-color: #f7ead0;
+      --edge-color: rgba(236, 214, 174, .26);
+      --edge-bright: rgba(255, 241, 212, .82);
+      --teal-shadow: rgba(16, 99, 91, .28);
+      --gold-muted: #d7c09a;
+      --header-font-family: "Marcellus SC";
+      --text-font-family: "Cormorant Garamond";
+      --mono-font-family: "IBM Plex Mono";
+      --text-font-weight: 500;
+      --bs-body-font-size: 1.2rem;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      min-height: 100vh;
+      font-family: var(--text-font-family), sans-serif;
+      font-optical-sizing: auto;
+      font-weight: var(--text-font-weight);
+      background: #000;
+      color: #fff;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      pointer-events: none;
+      opacity: .08;
+      background-image:
+        radial-gradient(circle at 22% 18%, rgba(255,255,255,.42) 0 1px, transparent 1.2px),
+        radial-gradient(circle at 76% 44%, rgba(181,33,45,.18) 0 1px, transparent 1.2px),
+        radial-gradient(circle at 44% 72%, rgba(219,197,157,.24) 0 1px, transparent 1.1px);
+      background-size: 96px 96px, 151px 151px, 211px 211px;
+      mix-blend-mode: screen;
+    }
+
+    .bg-image {
+      position: fixed;
+      inset: 0;
+      z-index: -2;
+      background-image:
+        linear-gradient(180deg, rgba(0,0,0,.15), rgba(0,0,0,.84)),
+        url("assets/agent-muse-background-final.png");
+      background-size: cover;
+      background-position: center bottom;
+      background-repeat: no-repeat;
+    }
+
+    .bg-image::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: -1;
+      background:
+        linear-gradient(90deg, rgba(0,0,0,.68), transparent 22%, transparent 78%, rgba(0,0,0,.7)),
+        radial-gradient(circle at 50% 22%, transparent 0 22%, rgba(0,0,0,.28) 48%, rgba(0,0,0,.7) 100%),
+        rgba(0,0,0,.1);
+    }
+
+    a {
+      color: var(--link-color);
+      padding: 1px 1px;
+      border-radius: 3px;
+      font-weight: 700;
+      transition: background-color .25s ease, color .25s ease;
+    }
+
+    a:hover {
+      color: #fff3de;
+      background-color: rgba(168,35,50,.2);
+      text-decoration: underline dotted;
+    }
+
+    a:has(> img):hover,
+    .navbar-brand:hover {
+      color: #fff;
+      background-color: inherit !important;
+      text-decoration: none;
+    }
+
+    b, strong, dt { font-weight: 560; }
+
+    header {
+      display: none;
+    }
+
+    .navbar {
+      background: #000 !important;
+      min-height: 62px;
+      border-bottom: 0;
+    }
+
+    .navbar > .container {
+      width: 100%;
+      max-width: none;
+      padding-left: 3rem;
+      padding-right: 3rem;
+      justify-content: flex-start;
+    }
+
+    .navbar-brand {
+      display: flex;
+      align-items: center;
+      gap: .55rem;
+      font-family: var(--mono-font-family), monospace;
+      font-size: .96rem;
+      font-weight: 600;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--header-color);
+    }
+
+    .brand-icon {
+      width: 32px;
+      height: 32px;
+      flex: 0 0 auto;
+      object-fit: contain;
+      filter: brightness(0) invert(1);
+    }
+
+    .utility-nav {
+      display: none;
+    }
+
+    main.page {
+      margin-top: 2.7rem;
+    }
+
+    main.page > .container {
+      width: min(1680px, calc(100% - 10rem));
+      max-width: none;
+    }
+
+    .main-content {
+      position: relative;
+      background: transparent;
+      backdrop-filter: none;
+      box-shadow: none !important;
+    }
+
+    .main-content::before,
+    .main-content::after {
+      content: "";
+      display: none;
+      position: absolute;
+      left: 1.4rem;
+      right: 1.4rem;
+      height: 1px;
+      pointer-events: none;
+      background: linear-gradient(90deg, transparent, var(--edge-color), transparent);
+    }
+
+    .main-content::before { top: .7rem; }
+    .main-content::after { bottom: .7rem; }
+
+    h1,
+    h1.page-header {
+      font-family: var(--header-font-family), serif;
+    }
+
+    h1.page-header {
+      margin: 0;
+      border-bottom: 0;
+      font-size: clamp(3rem, 4.4vw, 4.65rem);
+      font-weight: 400;
+      letter-spacing: .135em;
+      line-height: 1;
+      color: var(--header-color);
+      text-shadow:
+        0 .14rem .28rem rgba(0,0,0,.96),
+        0 0 1.15rem rgba(244,231,207,.12);
+    }
+
+    .page-header .header-label {
+      font-family: var(--header-font-family), serif;
+      font-weight: 400;
+      text-transform: uppercase;
+      color: #f2e5c8;
+    }
+
+    .page-title-icon {
+      display: none;
+    }
+
+    .published {
+      font-family: var(--mono-font-family), monospace !important;
+      color: #ead9bb !important;
+      font-size: .8rem !important;
+      font-weight: 600;
+      letter-spacing: .03em !important;
+      text-shadow: 0 .12rem .3rem rgba(0,0,0,.95) !important;
+    }
+
+    .text-muted { color: #fff !important; }
+
+    .table-dark {
+      --bs-table-bg: rgba(24, 24, 22, .78);
+      --bs-table-color: #fff;
+      --bs-table-border-color: rgba(236,214,174,.14);
+      backdrop-filter: blur(2px);
+    }
+
+    .table-responsive {
+      position: relative;
+      max-width: 99%;
+      margin: 0 auto;
+      padding: 0;
+      overflow-x: auto;
+      overflow-y: hidden;
+      border: 1px solid rgba(236,214,174,.34);
+      background: rgba(0, 0, 0, .04);
+      box-shadow:
+        0 0 0 1px rgba(236,214,174,.04),
+        0 1.6rem 3.8rem rgba(0,0,0,.42);
+      transition: border-color .22s ease, box-shadow .22s ease;
+    }
+
+    .table-responsive:hover {
+      border-color: rgba(255,241,212,.5);
+      box-shadow:
+        0 0 0 1px rgba(255,241,212,.08),
+        0 1.8rem 4.2rem rgba(0,0,0,.46);
+    }
+
+    table.calendar {
+      font-size: 1.12rem;
+      width: 100%;
+      max-width: none;
+      margin: 0;
+      border: 0;
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.07),
+        0 0 2.4rem rgba(0,0,0,.38);
+    }
+
+    .calendar thead th {
+      padding: .78rem .82rem;
+      color: #ead9bb;
+      font-family: var(--mono-font-family), monospace;
+      font-size: .82rem;
+      font-weight: 700;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      border-bottom: 2px solid rgba(236,214,174,.58);
+    }
+
+    .calendar thead th:first-child,
+    .calendar thead th:nth-child(3),
+    .calendar thead th:nth-child(5) {
+      display: none !important;
+    }
+
+    .calendar thead th:nth-child(4) {
+      display: table-cell !important;
+      text-align: center;
+    }
+
+    .calendar tbody td {
+      padding: .84rem .82rem;
+      border-color: rgba(236,214,174,.12);
+      vertical-align: top;
+    }
+
+    .calendar tbody tr {
+      transition: background-color .18s ease, box-shadow .18s ease;
+    }
+
+    .calendar tbody tr:hover {
+      background-color: rgba(255,241,212,.025);
+      box-shadow: inset .12rem 0 0 rgba(255,241,212,.34);
+    }
+
+    .calendar tbody tr:hover .lecture-title {
+      color: #fff7e6;
+      text-shadow: 0 .1rem .28rem rgba(0,0,0,.95);
+    }
+
+    .calendar-date {
+      width: 8.4rem;
+      color: rgba(234,217,187,.82);
+      white-space: nowrap;
+      font-family: var(--mono-font-family), monospace;
+      font-size: .96rem;
+      font-weight: 500;
+    }
+
+    .calendar-date,
+    .calendar-slides,
+    .calendar-video {
+      display: none !important;
+    }
+
+    .calendar-activity {
+      width: auto;
+    }
+
+    .lecture-title {
+      display: block;
+      color: #fff4e0;
+      font-family: var(--header-font-family), serif;
+      font-size: 1.22rem;
+      font-weight: 400;
+      letter-spacing: .055em;
+      line-height: 1.22;
+      margin-bottom: .28rem;
+      text-shadow: 0 .1rem .28rem rgba(0,0,0,.9);
+    }
+
+    .calendar dl {
+      margin-top: .16rem;
+    }
+
+    .calendar dt,
+    .calendar dd {
+      line-height: 1.35;
+    }
+
+    .calendar dt {
+      display: grid;
+      grid-template-columns: 1.65rem max-content;
+      align-items: center;
+      column-gap: .28rem;
+      color: #ead9bb;
+      font-family: var(--mono-font-family), monospace;
+      font-size: .82rem;
+      font-weight: 600;
+      letter-spacing: .035em;
+      white-space: nowrap;
+    }
+
+    .calendar dd {
+      color: rgba(255,255,255,.86);
+      font-weight: 500;
+    }
+
+    .calendar dt i {
+      position: relative;
+      display: inline-block;
+      width: 1.65rem;
+      height: 1.52rem;
+      margin-right: 0;
+      color: #ead9bb;
+      font-size: 0;
+      line-height: 0;
+    }
+
+    .calendar dt i.fa-file-alt::before,
+    .calendar dt i.fa-file-signature::before {
+      content: "\f1c1";
+      position: absolute;
+      inset: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: currentColor;
+      font-family: "Font Awesome 5 Free";
+      font-size: 1rem;
+      font-weight: 900;
+      line-height: 1;
+      text-rendering: auto;
+      -webkit-font-smoothing: antialiased;
+      filter: drop-shadow(0 0 .06rem rgba(0,0,0,.8));
+    }
+
+    .calendar dt i.fa-file-signature::before {
+      content: "\f15c";
+    }
+
+    .calendar dt i.fa-file-alt::after,
+    .calendar dt i.fa-file-signature::after {
+      content: none;
+    }
+
+    @media (min-width: 992px) {
+      .calendar-activity dl.row > dt {
+        flex: 0 0 9.4rem;
+        width: 9.4rem;
+        max-width: 9.4rem;
+      }
+
+      .calendar-activity dl.row > dd {
+        flex: 0 0 calc(100% - 9.4rem);
+        width: calc(100% - 9.4rem);
+        max-width: calc(100% - 9.4rem);
+      }
+    }
+
+    .calendar-notes {
+      display: table-cell !important;
+      width: 6.4rem;
+      text-align: center;
+      vertical-align: middle !important;
+    }
+
+    .schedule-badge {
+      color: var(--main-color);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 2.4rem;
+      height: 2.4rem;
+      margin: 0 auto;
+      font-weight: 700;
+      text-decoration: none;
+      text-shadow: none;
+    }
+
+    .schedule-badge i {
+      color: var(--main-color);
+      opacity: .88;
+    }
+
+    .anchor {
+      opacity: .52;
+      margin-left: .28rem;
+    }
+
+    .anchor:hover {
+      background: transparent;
+      opacity: 1;
+    }
+
+    .special {
+      color: #fff;
+      font-weight: 700;
+      opacity: .85;
+    }
+
+    .about {
+      width: 99%;
+      margin: 5rem auto 0;
+      padding: 0 .82rem 1.6rem;
+      background: transparent;
+      backdrop-filter: none;
+      color: rgba(255,255,255,.86);
+    }
+
+    .about h2 {
+      font-family: var(--header-font-family), serif;
+      font-weight: 800;
+      font-size: 1.7rem;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: #f4e7cf;
+      border-bottom: 0;
+      padding-bottom: 0;
+      margin-bottom: .85rem;
+      text-shadow: 0 .12rem .3rem rgba(0,0,0,.9), 0 0 1rem rgba(196,18,48,.18);
+    }
+
+    .about p {
+      max-width: 72rem;
+      line-height: 1.55;
+    }
+
+    .about-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 2rem;
+      align-items: start;
+      margin-top: 1.6rem;
+      max-width: none;
+    }
+
+    .about-card {
+      border: 0;
+      background: transparent;
+      padding: 0;
+      min-height: 0;
+    }
+
+    .about-card h3 {
+      margin: 0 0 .55rem;
+      color: #fff;
+      font-family: var(--mono-font-family), monospace;
+      font-size: .88rem;
+      font-weight: 700;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+    }
+
+    .about-card p {
+      margin: 0;
+      color: rgba(255,255,255,.78);
+      font-size: 1rem;
+      line-height: 1.48;
+      max-width: none;
+    }
+
+    .contact {
+      width: 99%;
+      margin: 3.6rem auto 0;
+      padding: .45rem .82rem 0;
+      color: rgba(255,255,255,.82);
+    }
+
+    .contact h2 {
+      margin: 0 0 .7rem;
+      color: #f4e7cf;
+      font-family: var(--header-font-family), serif;
+      font-size: 1.34rem;
+      font-weight: 400;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      text-shadow: 0 .12rem .3rem rgba(0,0,0,.9);
+    }
+
+    .contact p {
+      margin: 0;
+      max-width: 48rem;
+      line-height: 1.55;
+    }
+
+    .contact a {
+      color: #d8b2a3;
+    }
+
+    .footer-mark {
+      display: none;
+      position: fixed;
+      right: 1.5rem;
+      bottom: 1.4rem;
+      align-items: center;
+      gap: .45rem;
+      color: #fff;
+      opacity: .85;
+      pointer-events: none;
+    }
+
+    .footer-mark .brand-icon {
+      width: 46px;
+      height: 46px;
+    }
+
+    .footer-mark span {
+      display: block;
+      font-family: var(--header-font-family), serif;
+      font-size: 1.26rem;
+      line-height: 1.05;
+    }
+
+    .footer-mark small {
+      display: block;
+      font-size: 1rem;
+      color: rgba(255,255,255,.78);
+    }
+
+    @media (max-width: 991.98px) {
+      .navbar > .container {
+        padding-left: .85rem;
+        padding-right: .85rem;
+      }
+
+      main.page > .container {
+        width: 100%;
+      }
+
+      main.page {
+        margin-top: 1.25rem;
+      }
+
+      .main-content {
+        margin-left: 0;
+        margin-right: 0;
+        border-radius: 0 !important;
+      }
+
+      h1.page-header {
+        font-size: clamp(2.45rem, 11.5vw, 3.65rem);
+        letter-spacing: .025em;
+      }
+
+      .page-title-icon {
+        width: .76em;
+        margin-right: .08em;
+      }
+
+      table.calendar {
+        font-size: 1.02rem;
+        min-width: 48rem;
+      }
+
+      .calendar-date {
+        width: 5.8rem;
+      }
+
+      .lecture-title {
+        font-size: 1.16rem;
+      }
+    }
+
+    @media (max-width: 767.98px) {
+      .calendar dt,
+      .calendar dd {
+        font-size: .86rem;
+      }
+
+      .about-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+
+<body class="min-vh-100 d-flex flex-column h-100">
+  <div class="bg-image"></div>
+
+  <header>
+    <nav class="navbar fixed-top navbar-expand-lg navbar-dark" aria-label="Navigation Menu">
+      <div class="container">
+        <a class="navbar-brand" href="index.html" title="Coding Agent Notes">
+          <img class="brand-icon" src="assets/tsinghua-university-logo.svg" alt="" aria-hidden="true">
+          Coding Agent Notes
+        </a>
+      </div>
+    </nav>
+  </header>
+
+  <main class="flex-shrink-0 page">
+    <div class="container main-content rounded-2 mb-0 mb-lg-5 mt-0 mt-sm-3 mt-md-4 mt-lg-5 py-3 py-md-5 px-md-5 shadow-sm content">
+      <section id="reading-list">
+        <h1 class="page-header clearfix mb-3 mb-md-4">
+          <i class="far fa-file-alt page-title-icon"></i>
+          <span class="header-label">Coding Agent Notes</span>
+          <span class="fw-normal fs-6 float-end mt-2 published d-none d-xl-inline">
+            <i class="fa fa-calendar"></i>
+            <time datetime="2026-06-08">Last Updated: Jun 08, 2026</time>
+          </span>
+        </h1>
+
+        <div class="row pb-3 d-block d-xl-none">
+          <div class="col-12 text-start published">
+            <i class="fa fa-calendar"></i>
+            <time datetime="2026-06-08">Last Updated: Jun 08, 2026</time>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="table table-dark calendar">
+            <thead>
+              <tr>
+                <th aria-hidden="true">Date</th>
+                <th>Topic</th>
+                <th class="d-none d-lg-table-cell" aria-hidden="true"></th>
+                <th class="d-none d-lg-table-cell">Notes</th>
+                <th class="d-none d-lg-table-cell" aria-hidden="true"></th>
+              </tr>
+            </thead>
+            <tbody class="table-group-divider">
+              <tr id="note-01"><td class="calendar-date" title="Note 01">N01 <a class="anchor d-none d-lg-inline" href="#note-01" aria-hidden="true" title="Anchor Link: N01"><i class="fas fa-link anchor-icon text-muted"></i></a></td><td class="calendar-activity"><span class="lecture-title">#01: Long-horizon Coding Agent</span><dl class="row mb-0 ps-1"><dt class="col-4 col-lg-4 col-xl-3"><i class="fas fa-file-alt"></i> Reading:</dt><dd class="col-8 col-lg-8 col-xl-9 mb-0"><a href="https://arxiv.org/abs/2409.02977">Agent4SE Survey</a>, <a href="https://arxiv.org/abs/2310.06770">SWE-bench</a></dd><dt class="col-4 col-lg-4 col-xl-3"><i class="fas fa-file-signature"></i> Notes:</dt><dd class="col-8 col-lg-8 col-xl-9 mb-0"><a href="pdfs/01-long-horizon-coding-agent.pdf">PDF</a></dd></dl></td><td class="d-none d-lg-table-cell calendar-slides" aria-hidden="true"></td><td class="d-none d-lg-table-cell calendar-notes"><a href="pdfs/01-long-horizon-coding-agent.pdf" title="NOTES (Note #01)" class="schedule-badge"><i class="fas fa-file-alt fa-lg"></i></a></td><td class="d-none d-lg-table-cell calendar-video" aria-hidden="true"></td></tr>
+              <tr id="note-02"><td class="calendar-date" title="Note 02">N02 <a class="anchor d-none d-lg-inline" href="#note-02" aria-hidden="true" title="Anchor Link: N02"><i class="fas fa-link anchor-icon text-muted"></i></a></td><td class="calendar-activity"><span class="lecture-title">#02: Model Capability vs Harness Capability</span><dl class="row mb-0 ps-1"><dt class="col-4 col-lg-4 col-xl-3"><i class="fas fa-file-alt"></i> Reading:</dt><dd class="col-8 col-lg-8 col-xl-9 mb-0"><a href="https://arxiv.org/abs/2405.15793">SWE-agent</a>, <a href="https://arxiv.org/abs/2407.01489">Agentless</a>, <a href="https://arxiv.org/abs/2407.16741">OpenHands</a></dd><dt class="col-4 col-lg-4 col-xl-3"><i class="fas fa-file-signature"></i> Notes:</dt><dd class="col-8 col-lg-8 col-xl-9 mb-0"><a href="pdfs/02-model-vs-harness.pdf">PDF</a></dd></dl></td><td class="d-none d-lg-table-cell calendar-slides" aria-hidden="true"></td><td class="d-none d-lg-table-cell calendar-notes"><a href="pdfs/02-model-vs-harness.pdf" title="NOTES (Note #02)" class="schedule-badge"><i class="fas fa-file-alt fa-lg"></i></a></td><td class="d-none d-lg-table-cell calendar-video" aria-hidden="true"></td></tr>
+              <tr id="note-03"><td class="calendar-date" title="Note 03">N03 <a class="anchor d-none d-lg-inline" href="#note-03" aria-hidden="true" title="Anchor Link: N03"><i class="fas fa-link anchor-icon text-muted"></i></a></td><td class="calendar-activity"><span class="lecture-title">#03: Coder Foundation Models</span><dl class="row mb-0 ps-1"><dt class="col-4 col-lg-4 col-xl-3"><i class="fas fa-file-alt"></i> Reading:</dt><dd class="col-8 col-lg-8 col-xl-9 mb-0"><a href="https://arxiv.org/abs/2308.12950">Code Llama</a>, <a href="https://arxiv.org/abs/2402.19173">StarCoder2</a>, <a href="https://arxiv.org/abs/2401.14196">DeepSeek-Coder</a>, <a href="https://arxiv.org/abs/2409.12186">Qwen2.5-Coder</a></dd><dt class="col-4 col-lg-4 col-xl-3"><i class="fas fa-file-signature"></i> Notes:</dt><dd class="col-8 col-lg-8 col-xl-9 mb-0"><a href="pdfs/03-coder-foundation-models.pdf">PDF</a></dd></dl></td><td class="d-none d-lg-table-cell calendar-slides" aria-hidden="true"></td><td class="d-none d-lg-table-cell calendar-notes"><a href="pdfs/03-coder-foundation-models.pdf" title="NOTES (Note #03)" class="schedule-badge"><i class="fas fa-file-alt fa-lg"></i></a></td><td class="d-none d-lg-table-cell calendar-video" aria-hidden="true"></td></tr>
+              <tr id="note-04"><td class="calendar-date" title="Note 04">N04 <a class="anchor d-none d-lg-inline" href="#note-04" aria-hidden="true" title="Anchor Link: N04"><i class="fas fa-link anchor-icon text-muted"></i></a></td><td class="calendar-activity"><span class="lecture-title">#04: Repo-Issue Task Ladder</span><dl class="row mb-0 ps-1"><dt class="col-4 col-lg-4 col-xl-3"><i class="fas fa-file-alt"></i> Reading:</dt><dd class="col-8 col-lg-8 col-xl-9 mb-0"><a href="https://arxiv.org/abs/2107.03374">HumanEval</a>, <a href="https://arxiv.org/abs/2105.09938">APPS</a>, <a href="https://arxiv.org/abs/2306.03091">RepoBench</a>, <a href="https://arxiv.org/abs/2310.06770">SWE-bench</a></dd><dt class="col-4 col-lg-4 col-xl-3"><i class="fas fa-file-signature"></i> Notes:</dt><dd class="col-8 col-lg-8 col-xl-9 mb-0"><a href="pdfs/04-repo-issue-task-ladder.pdf">PDF</a></dd></dl></td><td class="d-none d-lg-table-cell calendar-slides" aria-hidden="true"></td><td class="d-none d-lg-table-cell calendar-notes"><a href="pdfs/04-repo-issue-task-ladder.pdf" title="NOTES (Note #04)" class="schedule-badge"><i class="fas fa-file-alt fa-lg"></i></a></td><td class="d-none d-lg-table-cell calendar-video" aria-hidden="true"></td></tr>
+              <tr id="note-05"><td class="calendar-date" title="Note 05">N05 <a class="anchor d-none d-lg-inline" href="#note-05" aria-hidden="true" title="Anchor Link: N05"><i class="fas fa-link anchor-icon text-muted"></i></a></td><td class="calendar-activity"><span class="lecture-title">#05: Agent Harness Basics</span><dl class="row mb-0 ps-1"><dt class="col-4 col-lg-4 col-xl-3"><i class="fas fa-file-alt"></i> Reading:</dt><dd class="col-8 col-lg-8 col-xl-9 mb-0"><a href="https://arxiv.org/abs/2405.15793">SWE-agent</a>, <a href="https://arxiv.org/abs/2407.16741">OpenHands</a>, <a href="https://arxiv.org/abs/2402.01030">CodeAct</a>, <a href="https://arxiv.org/abs/2407.01489">Agentless</a></dd><dt class="col-4 col-lg-4 col-xl-3"><i class="fas fa-file-signature"></i> Notes:</dt><dd class="col-8 col-lg-8 col-xl-9 mb-0"><a href="pdfs/05-agent-harness-basics.pdf">PDF</a></dd></dl></td><td class="d-none d-lg-table-cell calendar-slides" aria-hidden="true"></td><td class="d-none d-lg-table-cell calendar-notes"><a href="pdfs/05-agent-harness-basics.pdf" title="NOTES (Note #05)" class="schedule-badge"><i class="fas fa-file-alt fa-lg"></i></a></td><td class="d-none d-lg-table-cell calendar-video" aria-hidden="true"></td></tr>
+              <tr id="note-06"><td class="calendar-date" title="Note 06">N06 <a class="anchor d-none d-lg-inline" href="#note-06" aria-hidden="true" title="Anchor Link: N06"><i class="fas fa-link anchor-icon text-muted"></i></a></td><td class="calendar-activity"><span class="lecture-title">#06: SWE-agent ACI</span><dl class="row mb-0 ps-1"><dt class="col-4 col-lg-4 col-xl-3"><i class="fas fa-file-alt"></i> Reading:</dt><dd class="col-8 col-lg-8 col-xl-9 mb-0"><a href="https://arxiv.org/abs/2405.15793">SWE-agent</a>, <a href="https://swe-agent.com/latest/">SWE-agent Docs</a></dd><dt class="col-4 col-lg-4 col-xl-3"><i class="fas fa-file-signature"></i> Notes:</dt><dd class="col-8 col-lg-8 col-xl-9 mb-0"><a href="pdfs/06-swe-agent-aci.pdf">PDF</a></dd></dl></td><td class="d-none d-lg-table-cell calendar-slides" aria-hidden="true"></td><td class="d-none d-lg-table-cell calendar-notes"><a href="pdfs/06-swe-agent-aci.pdf" title="NOTES (Note #06)" class="schedule-badge"><i class="fas fa-file-alt fa-lg"></i></a></td><td class="d-none d-lg-table-cell calendar-video" aria-hidden="true"></td></tr>
+              <tr id="note-07"><td class="calendar-date" title="Note 07">N07 <a class="anchor d-none d-lg-inline" href="#note-07" aria-hidden="true" title="Anchor Link: N07"><i class="fas fa-link anchor-icon text-muted"></i></a></td><td class="calendar-activity"><span class="lecture-title">#07: Agentless</span><dl class="row mb-0 ps-1"><dt class="col-4 col-lg-4 col-xl-3"><i class="fas fa-file-alt"></i> Reading:</dt><dd class="col-8 col-lg-8 col-xl-9 mb-0"><a href="https://arxiv.org/abs/2407.01489">Agentless</a>, <a href="https://github.com/OpenAutoCoder/Agentless">Agentless Repo</a></dd><dt class="col-4 col-lg-4 col-xl-3"><i class="fas fa-file-signature"></i> Notes:</dt><dd class="col-8 col-lg-8 col-xl-9 mb-0"><a href="pdfs/07-agentless.pdf">PDF</a></dd></dl></td><td class="d-none d-lg-table-cell calendar-slides" aria-hidden="true"></td><td class="d-none d-lg-table-cell calendar-notes"><a href="pdfs/07-agentless.pdf" title="NOTES (Note #07)" class="schedule-badge"><i class="fas fa-file-alt fa-lg"></i></a></td><td class="d-none d-lg-table-cell calendar-video" aria-hidden="true"></td></tr>
+              <tr id="note-08"><td class="calendar-date" title="Note 08">N08 <a class="anchor d-none d-lg-inline" href="#note-08" aria-hidden="true" title="Anchor Link: N08"><i class="fas fa-link anchor-icon text-muted"></i></a></td><td class="calendar-activity"><span class="lecture-title">#08: mini-SWE-agent</span><dl class="row mb-0 ps-1"><dt class="col-4 col-lg-4 col-xl-3"><i class="fas fa-file-alt"></i> Reading:</dt><dd class="col-8 col-lg-8 col-xl-9 mb-0"><a href="https://mini-swe-agent.com/latest/">mini-SWE-agent Docs</a>, <a href="https://github.com/SWE-agent/mini-swe-agent">mini-SWE-agent Repo</a></dd><dt class="col-4 col-lg-4 col-xl-3"><i class="fas fa-file-signature"></i> Notes:</dt><dd class="col-8 col-lg-8 col-xl-9 mb-0"><a href="pdfs/08-mini-swe-agent.pdf">PDF</a></dd></dl></td><td class="d-none d-lg-table-cell calendar-slides" aria-hidden="true"></td><td class="d-none d-lg-table-cell calendar-notes"><a href="pdfs/08-mini-swe-agent.pdf" title="NOTES (Note #08)" class="schedule-badge"><i class="fas fa-file-alt fa-lg"></i></a></td><td class="d-none d-lg-table-cell calendar-video" aria-hidden="true"></td></tr>
+              <tr id="note-09"><td class="calendar-date" title="Note 09">N09 <a class="anchor d-none d-lg-inline" href="#note-09" aria-hidden="true" title="Anchor Link: N09"><i class="fas fa-link anchor-icon text-muted"></i></a></td><td class="calendar-activity"><span class="lecture-title">#09: OpenHands / CodeAct</span><dl class="row mb-0 ps-1"><dt class="col-4 col-lg-4 col-xl-3"><i class="fas fa-file-alt"></i> Reading:</dt><dd class="col-8 col-lg-8 col-xl-9 mb-0"><a href="https://arxiv.org/abs/2407.16741">OpenHands</a>, <a href="https://arxiv.org/abs/2402.01030">CodeAct</a>, <a href="https://docs.openhands.dev/sdk">OpenHands SDK</a></dd><dt class="col-4 col-lg-4 col-xl-3"><i class="fas fa-file-signature"></i> Notes:</dt><dd class="col-8 col-lg-8 col-xl-9 mb-0"><a href="pdfs/09-openhands-codeact.pdf">PDF</a></dd></dl></td><td class="d-none d-lg-table-cell calendar-slides" aria-hidden="true"></td><td class="d-none d-lg-table-cell calendar-notes"><a href="pdfs/09-openhands-codeact.pdf" title="NOTES (Note #09)" class="schedule-badge"><i class="fas fa-file-alt fa-lg"></i></a></td><td class="d-none d-lg-table-cell calendar-video" aria-hidden="true"></td></tr>
+              <tr id="note-10"><td class="calendar-date" title="Note 10">N10 <a class="anchor d-none d-lg-inline" href="#note-10" aria-hidden="true" title="Anchor Link: N10"><i class="fas fa-link anchor-icon text-muted"></i></a></td><td class="calendar-activity"><span class="lecture-title">#10: Aider</span><dl class="row mb-0 ps-1"><dt class="col-4 col-lg-4 col-xl-3"><i class="fas fa-file-alt"></i> Reading:</dt><dd class="col-8 col-lg-8 col-xl-9 mb-0"><a href="https://aider.chat/docs/usage.html">Aider Usage</a>, <a href="https://aider.chat/docs/repomap.html">Aider Repo Map</a></dd><dt class="col-4 col-lg-4 col-xl-3"><i class="fas fa-file-signature"></i> Notes:</dt><dd class="col-8 col-lg-8 col-xl-9 mb-0"><a href="pdfs/10-aider.pdf">PDF</a></dd></dl></td><td class="d-none d-lg-table-cell calendar-slides" aria-hidden="true"></td><td class="d-none d-lg-table-cell calendar-notes"><a href="pdfs/10-aider.pdf" title="NOTES (Note #10)" class="schedule-badge"><i class="fas fa-file-alt fa-lg"></i></a></td><td class="d-none d-lg-table-cell calendar-video" aria-hidden="true"></td></tr>
+              <tr id="note-11"><td class="calendar-date" title="Note 11">N11 <a class="anchor d-none d-lg-inline" href="#note-11" aria-hidden="true" title="Anchor Link: N11"><i class="fas fa-link anchor-icon text-muted"></i></a></td><td class="calendar-activity"><span class="lecture-title">#11: Product Coding Agent Workflow</span><dl class="row mb-0 ps-1"><dt class="col-4 col-lg-4 col-xl-3"><i class="fas fa-file-alt"></i> Reading:</dt><dd class="col-8 col-lg-8 col-xl-9 mb-0"><a href="https://developers.openai.com/codex/codex-manual.md">Codex Manual</a>, <a href="https://openai.com/index/introducing-codex/">Introducing Codex</a></dd><dt class="col-4 col-lg-4 col-xl-3"><i class="fas fa-file-signature"></i> Notes:</dt><dd class="col-8 col-lg-8 col-xl-9 mb-0"><a href="pdfs/11-product-coding-agent-workflow.pdf">PDF</a></dd></dl></td><td class="d-none d-lg-table-cell calendar-slides" aria-hidden="true"></td><td class="d-none d-lg-table-cell calendar-notes"><a href="pdfs/11-product-coding-agent-workflow.pdf" title="NOTES (Note #11)" class="schedule-badge"><i class="fas fa-file-alt fa-lg"></i></a></td><td class="d-none d-lg-table-cell calendar-video" aria-hidden="true"></td></tr>
+              <tr id="note-12"><td class="calendar-date" title="Note 12">N12 <a class="anchor d-none d-lg-inline" href="#note-12" aria-hidden="true" title="Anchor Link: N12"><i class="fas fa-link anchor-icon text-muted"></i></a></td><td class="calendar-activity"><span class="lecture-title">#12: Multi-agent Coding</span><dl class="row mb-0 ps-1"><dt class="col-4 col-lg-4 col-xl-3"><i class="fas fa-file-alt"></i> Reading:</dt><dd class="col-8 col-lg-8 col-xl-9 mb-0"><a href="https://arxiv.org/abs/2406.11638">MASAI</a>, <a href="https://developers.openai.com/codex/concepts/subagents">Codex Subagents</a></dd><dt class="col-4 col-lg-4 col-xl-3"><i class="fas fa-file-signature"></i> Notes:</dt><dd class="col-8 col-lg-8 col-xl-9 mb-0"><a href="pdfs/12-multi-agent-coding.pdf">PDF</a></dd></dl></td><td class="d-none d-lg-table-cell calendar-slides" aria-hidden="true"></td><td class="d-none d-lg-table-cell calendar-notes"><a href="pdfs/12-multi-agent-coding.pdf" title="NOTES (Note #12)" class="schedule-badge"><i class="fas fa-file-alt fa-lg"></i></a></td><td class="d-none d-lg-table-cell calendar-video" aria-hidden="true"></td></tr>
+              <tr id="note-13"><td class="calendar-date" title="Note 13">N13 <a class="anchor d-none d-lg-inline" href="#note-13" aria-hidden="true" title="Anchor Link: N13"><i class="fas fa-link anchor-icon text-muted"></i></a></td><td class="calendar-activity"><span class="lecture-title">#13: Context Engineering Basics</span><dl class="row mb-0 ps-1"><dt class="col-4 col-lg-4 col-xl-3"><i class="fas fa-file-alt"></i> Reading:</dt><dd class="col-8 col-lg-8 col-xl-9 mb-0"><a href="https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents">Effective Context Engineering</a>, <a href="https://developers.openai.com/codex/guides/agents-md">AGENTS.md Guide</a></dd><dt class="col-4 col-lg-4 col-xl-3"><i class="fas fa-file-signature"></i> Notes:</dt><dd class="col-8 col-lg-8 col-xl-9 mb-0"><a href="pdfs/13-context-engineering-basics.pdf">PDF</a></dd></dl></td><td class="d-none d-lg-table-cell calendar-slides" aria-hidden="true"></td><td class="d-none d-lg-table-cell calendar-notes"><a href="pdfs/13-context-engineering-basics.pdf" title="NOTES (Note #13)" class="schedule-badge"><i class="fas fa-file-alt fa-lg"></i></a></td><td class="d-none d-lg-table-cell calendar-video" aria-hidden="true"></td></tr>
+              <tr id="note-14"><td class="calendar-date" title="Note 14">N14 <a class="anchor d-none d-lg-inline" href="#note-14" aria-hidden="true" title="Anchor Link: N14"><i class="fas fa-link anchor-icon text-muted"></i></a></td><td class="calendar-activity"><span class="lecture-title">#14: Repo Map, AST, LSP</span><dl class="row mb-0 ps-1"><dt class="col-4 col-lg-4 col-xl-3"><i class="fas fa-file-alt"></i> Reading:</dt><dd class="col-8 col-lg-8 col-xl-9 mb-0"><a href="https://aider.chat/docs/repomap.html">Aider Repository Map</a>, <a href="https://tree-sitter.github.io/tree-sitter/using-parsers/">Tree-sitter</a>, <a href="https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/">LSP 3.17</a></dd><dt class="col-4 col-lg-4 col-xl-3"><i class="fas fa-file-signature"></i> Notes:</dt><dd class="col-8 col-lg-8 col-xl-9 mb-0"><a href="pdfs/14-repo-map-ast-lsp.pdf">PDF</a></dd></dl></td><td class="d-none d-lg-table-cell calendar-slides" aria-hidden="true"></td><td class="d-none d-lg-table-cell calendar-notes"><a href="pdfs/14-repo-map-ast-lsp.pdf" title="NOTES (Note #14)" class="schedule-badge"><i class="fas fa-file-alt fa-lg"></i></a></td><td class="d-none d-lg-table-cell calendar-video" aria-hidden="true"></td></tr>
+              <tr id="note-15"><td class="calendar-date" title="Note 15">N15 <a class="anchor d-none d-lg-inline" href="#note-15" aria-hidden="true" title="Anchor Link: N15"><i class="fas fa-link anchor-icon text-muted"></i></a></td><td class="calendar-activity"><span class="lecture-title">#15: ContextBench</span><dl class="row mb-0 ps-1"><dt class="col-4 col-lg-4 col-xl-3"><i class="fas fa-file-alt"></i> Reading:</dt><dd class="col-8 col-lg-8 col-xl-9 mb-0"><a href="https://arxiv.org/abs/2602.05892">ContextBench</a>, <a href="https://cioutn.github.io/context-bench/">Project Page</a></dd><dt class="col-4 col-lg-4 col-xl-3"><i class="fas fa-file-signature"></i> Notes:</dt><dd class="col-8 col-lg-8 col-xl-9 mb-0"><a href="pdfs/15-contextbench.pdf">PDF</a></dd></dl></td><td class="d-none d-lg-table-cell calendar-slides" aria-hidden="true"></td><td class="d-none d-lg-table-cell calendar-notes"><a href="pdfs/15-contextbench.pdf" title="NOTES (Note #15)" class="schedule-badge"><i class="fas fa-file-alt fa-lg"></i></a></td><td class="d-none d-lg-table-cell calendar-video" aria-hidden="true"></td></tr>
+              <tr id="note-16"><td class="calendar-date" title="Note 16">N16 <a class="anchor d-none d-lg-inline" href="#note-16" aria-hidden="true" title="Anchor Link: N16"><i class="fas fa-link anchor-icon text-muted"></i></a></td><td class="calendar-activity"><span class="lecture-title">#16: SWE-ContextBench</span><dl class="row mb-0 ps-1"><dt class="col-4 col-lg-4 col-xl-3"><i class="fas fa-file-alt"></i> Reading:</dt><dd class="col-8 col-lg-8 col-xl-9 mb-0"><a href="https://arxiv.org/abs/2602.08316">SWE-ContextBench</a>, <a href="https://arxiv.org/abs/2310.06770">SWE-bench</a></dd><dt class="col-4 col-lg-4 col-xl-3"><i class="fas fa-file-signature"></i> Notes:</dt><dd class="col-8 col-lg-8 col-xl-9 mb-0"><a href="pdfs/16-swe-contextbench.pdf">PDF</a></dd></dl></td><td class="d-none d-lg-table-cell calendar-slides" aria-hidden="true"></td><td class="d-none d-lg-table-cell calendar-notes"><a href="pdfs/16-swe-contextbench.pdf" title="NOTES (Note #16)" class="schedule-badge"><i class="fas fa-file-alt fa-lg"></i></a></td><td class="d-none d-lg-table-cell calendar-video" aria-hidden="true"></td></tr>
+              <tr id="note-17"><td class="calendar-date" title="Note 17">N17 <a class="anchor d-none d-lg-inline" href="#note-17" aria-hidden="true" title="Anchor Link: N17"><i class="fas fa-link anchor-icon text-muted"></i></a></td><td class="calendar-activity"><span class="lecture-title">#17: Long-running Harness</span><dl class="row mb-0 ps-1"><dt class="col-4 col-lg-4 col-xl-3"><i class="fas fa-file-alt"></i> Reading:</dt><dd class="col-8 col-lg-8 col-xl-9 mb-0"><a href="https://arxiv.org/abs/2603.01209">Agents Learn Their Runtime</a>, <a href="https://docs.openhands.dev/sdk/guides/convo-persistence">OpenHands Persistence</a></dd><dt class="col-4 col-lg-4 col-xl-3"><i class="fas fa-file-signature"></i> Notes:</dt><dd class="col-8 col-lg-8 col-xl-9 mb-0"><a href="pdfs/17-long-running-harness.pdf">PDF</a></dd></dl></td><td class="d-none d-lg-table-cell calendar-slides" aria-hidden="true"></td><td class="d-none d-lg-table-cell calendar-notes"><a href="pdfs/17-long-running-harness.pdf" title="NOTES (Note #17)" class="schedule-badge"><i class="fas fa-file-alt fa-lg"></i></a></td><td class="d-none d-lg-table-cell calendar-video" aria-hidden="true"></td></tr>
+              <tr id="note-18"><td class="calendar-date" title="Note 18">N18 <a class="anchor d-none d-lg-inline" href="#note-18" aria-hidden="true" title="Anchor Link: N18"><i class="fas fa-link anchor-icon text-muted"></i></a></td><td class="calendar-activity"><span class="lecture-title">#18: Agent Skills</span><dl class="row mb-0 ps-1"><dt class="col-4 col-lg-4 col-xl-3"><i class="fas fa-file-alt"></i> Reading:</dt><dd class="col-8 col-lg-8 col-xl-9 mb-0"><a href="https://agentskills.io/specification">Agent Skills Specification</a>, <a href="https://arxiv.org/abs/2602.08004">Agent Skills Analysis</a></dd><dt class="col-4 col-lg-4 col-xl-3"><i class="fas fa-file-signature"></i> Notes:</dt><dd class="col-8 col-lg-8 col-xl-9 mb-0"><a href="pdfs/18-agent-skills.pdf">PDF</a></dd></dl></td><td class="d-none d-lg-table-cell calendar-slides" aria-hidden="true"></td><td class="d-none d-lg-table-cell calendar-notes"><a href="pdfs/18-agent-skills.pdf" title="NOTES (Note #18)" class="schedule-badge"><i class="fas fa-file-alt fa-lg"></i></a></td><td class="d-none d-lg-table-cell calendar-video" aria-hidden="true"></td></tr>
+              <tr id="note-19"><td class="calendar-date" title="Note 19">N19 <a class="anchor d-none d-lg-inline" href="#note-19" aria-hidden="true" title="Anchor Link: N19"><i class="fas fa-link anchor-icon text-muted"></i></a></td><td class="calendar-activity"><span class="lecture-title">#19: Trajectory Integrity</span><dl class="row mb-0 ps-1"><dt class="col-4 col-lg-4 col-xl-3"><i class="fas fa-file-alt"></i> Reading:</dt><dd class="col-8 col-lg-8 col-xl-9 mb-0"><a href="https://arxiv.org/abs/2604.11557">UniToolCall</a>, <a href="https://arxiv.org/abs/2510.04550">TRAJECT-Bench</a>, <a href="https://arxiv.org/abs/2602.02475">AgentRx</a></dd><dt class="col-4 col-lg-4 col-xl-3"><i class="fas fa-file-signature"></i> Notes:</dt><dd class="col-8 col-lg-8 col-xl-9 mb-0"><a href="pdfs/19-trajectory-integrity.pdf">PDF</a></dd></dl></td><td class="d-none d-lg-table-cell calendar-slides" aria-hidden="true"></td><td class="d-none d-lg-table-cell calendar-notes"><a href="pdfs/19-trajectory-integrity.pdf" title="NOTES (Note #19)" class="schedule-badge"><i class="fas fa-file-alt fa-lg"></i></a></td><td class="d-none d-lg-table-cell calendar-video" aria-hidden="true"></td></tr>
+              <tr id="note-20"><td class="calendar-date" title="Note 20">N20 <a class="anchor d-none d-lg-inline" href="#note-20" aria-hidden="true" title="Anchor Link: N20"><i class="fas fa-link anchor-icon text-muted"></i></a></td><td class="calendar-activity"><span class="lecture-title">#20: Tool Design for Agents</span><dl class="row mb-0 ps-1"><dt class="col-4 col-lg-4 col-xl-3"><i class="fas fa-file-alt"></i> Reading:</dt><dd class="col-8 col-lg-8 col-xl-9 mb-0"><a href="https://www.anthropic.com/engineering/writing-tools-for-agents">Writing Tools for Agents</a>, <a href="https://platform.openai.com/docs/guides/function-calling?api-mode=responses">OpenAI Function Calling</a>, <a href="https://modelcontextprotocol.io/specification/2025-06-18/server/tools">MCP Tools</a></dd><dt class="col-4 col-lg-4 col-xl-3"><i class="fas fa-file-signature"></i> Notes:</dt><dd class="col-8 col-lg-8 col-xl-9 mb-0"><a href="pdfs/20-tool-design-for-agents.pdf">PDF</a></dd></dl></td><td class="d-none d-lg-table-cell calendar-slides" aria-hidden="true"></td><td class="d-none d-lg-table-cell calendar-notes"><a href="pdfs/20-tool-design-for-agents.pdf" title="NOTES (Note #20)" class="schedule-badge"><i class="fas fa-file-alt fa-lg"></i></a></td><td class="d-none d-lg-table-cell calendar-video" aria-hidden="true"></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="about" id="about">
+        <h2>About</h2>
+        <p>
+          Agent Notes is a curated map for understanding coding agents: how they plan, use tools, edit repositories,
+          recover from failures, and remain trustworthy over long tasks.
+        </p>
+        <div class="about-grid">
+          <div class="about-card">
+            <h3>Why These Readings</h3>
+            <p>Each item is selected because it explains a core mechanism, a widely used system, or an evaluation signal that changes how coding agents are built.</p>
+          </div>
+          <div class="about-card">
+            <h3>What Notes Deliver</h3>
+            <p>Every note distills the original source into reusable concepts, implementation patterns, failure modes, and practical takeaways for building agents.</p>
+          </div>
+          <div class="about-card">
+            <h3>How To Read</h3>
+            <p>Start with the paper for context, then use the note as a guided reconstruction: what problem it solves, what design choices matter, and what to verify in code.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="contact" id="contact">
+        <h2>Contact</h2>
+        <p>
+          For notes, corrections, or reading suggestions, contact
+          <a href="mailto:wfk25@mails.tsinghua.edu.cn">wfk25@mails.tsinghua.edu.cn</a>.
+        </p>
+      </section>
+    </div>
+  </main>
+
+  <div class="footer-mark" aria-hidden="true">
+    <svg class="brand-icon" viewBox="0 0 48 48">
+      <ellipse cx="24" cy="10" rx="17" ry="6" fill="none" stroke="currentColor" stroke-width="4"/>
+      <path d="M7 10v22c0 3.4 7.6 6 17 6s17-2.6 17-6V10" fill="none" stroke="currentColor" stroke-width="4"/>
+      <path d="M7 21c0 3.4 7.6 6 17 6s17-2.6 17-6" fill="none" stroke="currentColor" stroke-width="4"/>
+    </svg>
+    <span>Tsinghua<br><small>Coding Agents</small></span>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

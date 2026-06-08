@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Fukang Wen</title>
-    <meta name="description" content="Fukang Wen - Master Student at Qiuzhen College, Tsinghua University. Research interests: LLM Reasoning, LLMs for Science, Computer Vision, NLP.">
+    <meta name="description" content="Fukang Wen - Master Student at Qiuzhen College, Tsinghua University. Research interests: LLM Reasoning, Coding Agents, Long-Horizon Task Agents, and LLM Systems.">
     <meta name="author" content="Fukang Wen">
     
     <!-- Google Fonts -->
@@ -50,15 +50,13 @@
             font-weight: 700;
             margin-top: 30px;
             margin-bottom: 15px;
-            padding-bottom: 5px;
-            border-bottom: 1px solid #ddd;
         }
         
         .header {
             display: flex;
             gap: 30px;
             margin-bottom: 30px;
-            align-items: flex-start;
+            align-items: center;
         }
         
         .profile-photo {
@@ -89,18 +87,18 @@
             margin-bottom: 25px;
             color: #555;
         }
-        
+
+        .note-item {
+            margin-bottom: 25px;
+            padding-bottom: 25px;
+        }
+
         /* Publication/Note Entry */
         .entry {
             display: flex;
             gap: 20px;
             margin-bottom: 25px;
             padding-bottom: 25px;
-            border-bottom: 1px solid #eee;
-        }
-        
-        .entry:last-child {
-            border-bottom: none;
         }
         
         .entry-image {
@@ -116,6 +114,11 @@
             width: 100%;
             height: 100%;
             object-fit: cover;
+        }
+
+        .entry-image img.contain {
+            object-fit: contain;
+            background: #fff;
         }
         
         .entry-image-placeholder {
@@ -168,7 +171,9 @@
         }
         
         .entry-links a {
+            display: inline-block;
             margin-right: 10px;
+            white-space: nowrap;
         }
         
         .highlight {
@@ -189,7 +194,6 @@
         footer {
             margin-top: 50px;
             padding-top: 20px;
-            border-top: 1px solid #ddd;
             text-align: center;
             font-size: 13px;
             color: #999;
@@ -228,21 +232,18 @@
                 from the Department of Mathematics.
             </p>
             <p>
-                Currently, I am supervised by <a href="https://shizqi.github.io/">Prof. Zuoqiang Shi</a> 
-                at Qiuzhen College. I also closely collaborate with 
-                <a href="https://www.bimsa.cn/detail/pipihu.html">Prof. Pipi Hu</a>, Associate Researcher at BIMSA.
+                Currently, I am supervised by <a href="https://gaohuang-net.github.io">Prof. Gao Huang</a> 
+                at Qiuzhen College.
             </p>
             <p>
                 My research interests lie in <strong>Large Language Model Reasoning</strong>, 
-                <strong>LLMs for Science</strong>, <strong>Computer Vision</strong>, and 
-                <strong>Natural Language Processing</strong>. I am particularly excited about 
-                building AI systems that can reason, discover, and assist scientific research.
+                <strong>Coding Agents</strong>, <strong>Long-Horizon Task Agents</strong>, and 
+                <strong>LLM Systems</strong>.
             </p>
             <div class="links">
                 <a href="mailto:wfk25@tsinghua.edu.cn">Email</a>
                 <a href="https://github.com/kangkangzi2025">GitHub</a>
-                <a href="https://scholar.google.com/">Google Scholar</a>
-                <a href="#notes">Notes</a>
+                <a href="coding-agent/index.html">Agent Notes</a>
             </div>
         </div>
     </div>
@@ -250,10 +251,33 @@
     <!-- Research -->
     <h2>Research</h2>
     <p class="research-intro">
-        I'm interested in understanding and improving how large language models reason, 
-        and applying AI to accelerate scientific discovery. I also work on computer vision 
-        and natural language processing problems.
+        I work on reasoning and systems for large language models, with a focus on coding agents 
+        and long-horizon task execution.
     </p>
+
+    <!-- Notes Section -->
+    <h2 id="notes">Notes</h2>
+    <div class="note-item">
+        <div class="entry-title">
+            <a href="coding-agent/index.html">Coding Agent Notes</a>
+        </div>
+        <div class="entry-authors">
+            Fukang Wen
+        </div>
+        <div class="entry-venue">
+            Reading Notes, June 2026
+        </div>
+        <div class="entry-description">
+            A curated reading map for coding agents, covering harness design, context engineering,
+            repository editing, evaluation, tool use, and long-horizon task execution.
+        </div>
+        <div class="entry-links">
+            <span class="tag">Coding Agents</span>
+            <span class="tag">LLM Systems</span>
+            <span class="tag">Long-Horizon Tasks</span>
+            <a href="coding-agent/index.html">Read Notes</a>
+        </div>
+    </div>
 
     <!-- Projects Section -->
     <h2 id="projects">Projects</h2>
@@ -290,229 +314,11 @@
         </div>
     </div>
 
-    <!-- Notes Section -->
-    <h2 id="notes">Notes</h2>
-    <p class="research-intro">
-        I write technical notes to deeply understand and explain key concepts in AI. 
-        These notes aim to be clear, rigorous, and self-contained.
-    </p>
-
-    <div class="entry">
-        <div class="entry-image">
-            <div class="entry-image-placeholder" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
-                Diffusion
-            </div>
-        </div>
-        <div class="entry-content">
-            <div class="entry-title">
-                <a href="notes/diffusion.html">Diffusion Models: From DDPM to Sora</a>
-            </div>
-            <div class="entry-authors">
-                Fukang Wen
-            </div>
-            <div class="entry-venue">
-                Technical Note, January 2026
-            </div>
-            <div class="entry-description">
-                A comprehensive introduction to diffusion models for image and video generation. 
-                Covers DDPM, DDIM, Latent Diffusion, Classifier-Free Guidance, DiT architecture, 
-                and modern video generation systems like Sora.
-            </div>
-            <div class="entry-links">
-                <span class="tag">Generative Models</span>
-                <span class="tag">Diffusion</span>
-                <span class="tag">Video Generation</span>
-                <a href="notes/diffusion.html">Read Note</a>
-            </div>
-        </div>
-    </div>
-
-    <div class="entry">
-        <div class="entry-image">
-            <div class="entry-image-placeholder" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-                VAE
-            </div>
-        </div>
-        <div class="entry-content">
-            <div class="entry-title">
-                <a href="notes/vae.html">Variational Autoencoders: A Theoretical Introduction</a>
-            </div>
-            <div class="entry-authors">
-                Fukang Wen
-            </div>
-            <div class="entry-venue">
-                Technical Note, January 2026
-            </div>
-            <div class="entry-description">
-                A comprehensive theoretical introduction to Variational Autoencoders. Covers the 
-                probabilistic framework, ELBO derivation, reparameterization trick, and variants 
-                including Beta-VAE, CVAE, VQ-VAE, hierarchical VAEs, and VAE-GAN.
-            </div>
-            <div class="entry-links">
-                <span class="tag">Generative Models</span>
-                <span class="tag">VAE</span>
-                <span class="tag">Variational Inference</span>
-                <a href="notes/vae.html">Read Note</a>
-            </div>
-        </div>
-    </div>
-
-    <div class="entry">
-        <div class="entry-image">
-            <div class="entry-image-placeholder" style="background: linear-gradient(135deg, #f7971e 0%, #ffd200 100%);">
-                TTT
-            </div>
-        </div>
-        <div class="entry-content">
-            <div class="entry-title">
-                <a href="notes/ttt.html">Test-Time Training: A Theoretical Introduction</a>
-            </div>
-            <div class="entry-authors">
-                Fukang Wen
-            </div>
-            <div class="entry-venue">
-                Technical Note, January 2026
-            </div>
-            <div class="entry-description">
-                A comprehensive introduction to Test-Time Training, from distribution shift adaptation 
-                to TTT Layers for sequence modeling. Covers the original TTT framework, TENT, 
-                TTT-Linear, TTT-MLP, and connections to Transformers and Mamba.
-            </div>
-            <div class="entry-links">
-                <span class="tag">Test-Time Training</span>
-                <span class="tag">Sequence Modeling</span>
-                <span class="tag">Distribution Shift</span>
-                <a href="notes/ttt.html">Read Note</a>
-            </div>
-        </div>
-    </div>
-
-    <div class="entry">
-        <div class="entry-image">
-            <div class="entry-image-placeholder" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);">
-                Mamba
-            </div>
-        </div>
-        <div class="entry-content">
-            <div class="entry-title">
-                <a href="notes/mamba.html">State Space Models and Mamba</a>
-            </div>
-            <div class="entry-authors">
-                Fukang Wen
-            </div>
-            <div class="entry-venue">
-                Technical Note, February 2026
-            </div>
-            <div class="entry-description">
-                From continuous SSMs to Mamba-2. Covers HiPPO matrices, S4 architecture, 
-                selective state spaces, hardware-aware algorithms, and state space duality 
-                connecting SSMs to linear attention.
-            </div>
-            <div class="entry-links">
-                <span class="tag">SSM</span>
-                <span class="tag">Mamba</span>
-                <span class="tag">S4</span>
-                <a href="notes/mamba.html">Read Note</a>
-            </div>
-        </div>
-    </div>
-
-    <div class="entry">
-        <div class="entry-image">
-            <div class="entry-image-placeholder" style="background: linear-gradient(135deg, #834d9b 0%, #d04ed6 100%);">
-                Discrete Diffusion
-            </div>
-        </div>
-        <div class="entry-content">
-            <div class="entry-title">
-                <a href="notes/discrete-diffusion.html">Discrete Diffusion Models</a>
-            </div>
-            <div class="entry-authors">
-                Fukang Wen
-            </div>
-            <div class="entry-venue">
-                Technical Note, February 2026
-            </div>
-            <div class="entry-description">
-                Diffusion models for text and discrete data. Covers transition matrices, 
-                D3PM with absorbing/uniform/Gaussian transitions, MDLM (masked diffusion), 
-                and SEDD (score entropy discrete diffusion).
-            </div>
-            <div class="entry-links">
-                <span class="tag">Discrete Diffusion</span>
-                <span class="tag">D3PM</span>
-                <span class="tag">MDLM</span>
-                <a href="notes/discrete-diffusion.html">Read Note</a>
-            </div>
-        </div>
-    </div>
-
-    <div class="entry">
-        <div class="entry-image">
-            <div class="entry-image-placeholder" style="background: linear-gradient(135deg, #eb3349 0%, #f45c43 100%);">
-                RL for LLMs
-            </div>
-        </div>
-        <div class="entry-content">
-            <div class="entry-title">
-                <a href="notes/rl-llm.html">Reinforcement Learning for LLMs</a>
-            </div>
-            <div class="entry-authors">
-                Fukang Wen
-            </div>
-            <div class="entry-venue">
-                Technical Note, February 2026
-            </div>
-            <div class="entry-description">
-                Training reasoning models with RL. Covers PPO, GRPO (DeepSeek), Dr.GRPO, 
-                DAPO, and SDPO—the algorithms behind DeepSeek-R1 and OpenAI o1. Includes 
-                length bias analysis and decoupled clipping.
-            </div>
-            <div class="entry-links">
-                <span class="tag">RL</span>
-                <span class="tag">PPO</span>
-                <span class="tag">GRPO</span>
-                <span class="tag">DAPO</span>
-                <a href="notes/rl-llm.html">Read Note</a>
-            </div>
-        </div>
-    </div>
-
-    <div class="entry">
-        <div class="entry-image">
-            <div class="entry-image-placeholder" style="background: linear-gradient(135deg, #4568dc 0%, #b06ab3 100%);">
-                Nested Learning
-            </div>
-        </div>
-        <div class="entry-content">
-            <div class="entry-title">
-                <a href="notes/nested-learning.html">Nested Learning: ML as Optimization over Optimization</a>
-            </div>
-            <div class="entry-authors">
-                Fukang Wen
-            </div>
-            <div class="entry-venue">
-                Technical Note, February 2026
-            </div>
-            <div class="entry-description">
-                Google's NeurIPS 2025 framework reconceptualizing ML as nested optimization. 
-                Covers bilevel optimization, expressive optimizers as associative memory, 
-                self-modifying modules, and the Hope module with continuum memory.
-            </div>
-            <div class="entry-links">
-                <span class="tag">Meta-Learning</span>
-                <span class="tag">Optimization</span>
-                <span class="tag">Hope</span>
-                <a href="notes/nested-learning.html">Read Note</a>
-            </div>
-        </div>
-    </div>
-
     <!-- Footer -->
     <footer>
         <p>
             Website design inspired by <a href="https://jonbarron.info/">Jon Barron</a>.
-            Last updated: February 2026.
+            Last updated: June 2026.
         </p>
     </footer>
 </body>
